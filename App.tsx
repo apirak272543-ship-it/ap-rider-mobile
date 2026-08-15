@@ -16,7 +16,7 @@ const sessionBridge = `
     var key = ${JSON.stringify(SESSION_STORAGE_KEY)};
     function sendSession() {
       try {
-        var raw = window.sessionStorage.getItem(key);
+        var raw = window.localStorage.getItem(key) || window.sessionStorage.getItem(key);
         if (!raw || !window.ReactNativeWebView) return;
         var parsed = JSON.parse(raw);
         var session = parsed && (parsed.currentSession || parsed);
