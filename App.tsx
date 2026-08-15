@@ -40,6 +40,7 @@ export default function App() {
   const [preferences, setPreferences] = useState<NotificationPreferences>(DEFAULT_NOTIFICATION_PREFERENCES);
   const [pushToken, setPushToken] = useState<string | null>(null);
   const [session, setSession] = useState<Session | null>(null);
+  const pushIssueRef = useRef<string | null>(null);
   const [otaLoading, setOtaLoading] = useState(false);
   const [otaResult, setOtaResult] = useState<OtaResult | null>(null);
 
@@ -47,7 +48,13 @@ export default function App() {
     let active = true;
     void (async () => {
       const saved = await loadNotificationPreferences();
-      const token = await setupRiderNotifications();
+      let token: string | null = null;
+      try { token = await setupRiderNotifications(); }
+      catch (error) {
+        const message = error instanceof Error ? error.message : "ไม่สามารถตั้งค่าการแจ้งเตือนได้";
+        pushIssueRef.current = message;
+        Alert.alert("ยังเปิดแจ้งเตือนไม่สำเร็จ", message);
+      }
       if (!active) return;
       setPreferences(saved);
       setPushToken(token);
@@ -57,7 +64,10 @@ export default function App() {
 
   useEffect(() => {
     if (!session || !pushToken) return;
-    void registerPushToken(session, pushToken, preferences).catch(() => undefined);
+    void registerPushToken(session, pushToken, preferences).then(() => { pushIssueRef.current = null; }).catch((error) => {
+      const message = error instanceof Error ? error.message : "ไม่สามารถบันทึกอุปกรณ์สำหรับแจ้งเตือนได้";
+      if (pushIssueRef.current !== message) { pushIssueRef.current = message; Alert.alert("ยังเชื่อมการแจ้งเตือนไม่สำเร็จ", message); }
+    });
   }, [session, pushToken, preferences]);
 
   useEffect(() => {

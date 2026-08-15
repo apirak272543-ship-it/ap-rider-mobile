@@ -32,16 +32,15 @@ async function createRiderChannels() {
 
 export async function setupRiderNotifications() {
   await createRiderChannels();
-  if (!Device.isDevice) return null;
+  if (!Device.isDevice) throw new Error("ต้องเปิดจากโทรศัพท์จริงเพื่อรับการแจ้งเตือน");
   const existing = await Notifications.getPermissionsAsync();
   const status = existing.status === "granted" ? existing.status : (await Notifications.requestPermissionsAsync()).status;
-  if (status !== "granted") return null;
-  try {
-    const projectId = Constants.easConfig?.projectId || Constants.expoConfig?.extra?.eas?.projectId;
-    return projectId ? (await Notifications.getExpoPushTokenAsync({ projectId })).data : (await Notifications.getExpoPushTokenAsync()).data;
-  } catch {
-    return null;
-  }
+  if (status !== "granted") throw new Error("ยังไม่ได้อนุญาตการแจ้งเตือน กรุณาเปิดสิทธิ์ Notifications ของ AP Rider ในการตั้งค่าโทรศัพท์");
+  const projectId = Constants.easConfig?.projectId || Constants.expoConfig?.extra?.eas?.projectId;
+  if (!projectId) throw new Error("ไม่พบรหัสโครงการสำหรับสร้าง Push token");
+  const token = (await Notifications.getExpoPushTokenAsync({ projectId })).data;
+  if (!token) throw new Error("ยังสร้าง Push token ไม่สำเร็จ โปรดตรวจสอบอินเทอร์เน็ตแล้วเปิดแอปใหม่");
+  return token;
 }
 
 export async function notifyNewJob(title: string, preferences: NotificationPreferences) {
