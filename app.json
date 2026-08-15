@@ -11,6 +11,7 @@
     "updates": { "url": "https://u.expo.dev/cbb56723-cb94-4658-9c41-5d19c767c5d9", "checkAutomatically": "ON_LOAD", "fallbackToCacheTimeout": 0 },
     "android": {
       "package": "com.apservice.rider",
+      "googleServicesFile": "./google-services.json",
       "permissions": ["POST_NOTIFICATIONS", "ACCESS_FINE_LOCATION", "ACCESS_COARSE_LOCATION", "FOREGROUND_SERVICE", "FOREGROUND_SERVICE_LOCATION"],
       "adaptiveIcon": { "foregroundImage": "./assets/adaptive-icon.png", "backgroundColor": "#0F4C81" }
     },
