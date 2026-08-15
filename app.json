@@ -1,0 +1,27 @@
+{
+  "expo": {
+    "name": "AP Rider",
+    "slug": "ap-rider-mobile",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "icon": "./assets/icon.png",
+    "userInterfaceStyle": "light",
+    "owner": "apirak272543art",
+    "runtimeVersion": { "policy": "appVersion" },
+    "updates": { "url": "https://u.expo.dev/cbb56723-cb94-4658-9c41-5d19c767c5d9", "checkAutomatically": "ON_LOAD", "fallbackToCacheTimeout": 0 },
+    "android": {
+      "package": "com.apservice.rider",
+      "permissions": ["POST_NOTIFICATIONS", "ACCESS_FINE_LOCATION", "ACCESS_COARSE_LOCATION", "FOREGROUND_SERVICE", "FOREGROUND_SERVICE_LOCATION"],
+      "adaptiveIcon": { "foregroundImage": "./assets/adaptive-icon.png", "backgroundColor": "#0F4C81" }
+    },
+    "plugins": [
+      ["expo-notifications", { "defaultChannel": "rider-ap_urgent", "sounds": ["./assets/sounds/ap_chime.wav", "./assets/sounds/ap_urgent.wav", "./assets/sounds/ap_priority.wav"] }],
+      ["expo-location", { "locationWhenInUsePermission": "อนุญาตให้ AP Rider ใช้ตำแหน่งเพื่ออัปเดตงานจัดส่ง" }]
+    ],
+    "extra": {
+      "supabaseUrl": "https://abtsctwfkgzciseppach.supabase.co",
+      "supabasePublishableKey": "sb_publishable_TyJWnKkbS8vKcQKKAzoqSg_BOguwKRv",
+      "eas": { "projectId": "cbb56723-cb94-4658-9c41-5d19c767c5d9" }
+    }
+  }
+}
