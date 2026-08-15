@@ -2,9 +2,9 @@ import { useEffect, useRef, useState } from "react";
 import { ActivityIndicator, Alert, AppState, BackHandler, Modal, Pressable, SafeAreaView, StatusBar, StyleSheet, Switch, Text, View } from "react-native";
 import { WebView } from "react-native-webview";
 
-import { countAvailableRiderJobs, registerPushToken, Session } from "./src/api";
+import { clearSession, countAvailableRiderJobs, disablePushToken, registerPushToken, Session } from "./src/api";
 import { DEFAULT_NOTIFICATION_PREFERENCES, loadNotificationPreferences, NotificationPreferences, NotificationTone, saveNotificationPreferences } from "./src/notification-settings";
-import { notificationToneLabel, notifyNewJob, playRiderNotificationPreview, setupRiderNotifications } from "./src/notifications";
+import { notificationToneLabel, notifyNewJob, notifyRiderActionConfirmed, notifyRiderJobAccepted, playRiderNotificationPreview, setupRiderNotifications } from "./src/notifications";
 import { applyOtaUpdate, downloadOtaUpdate, OtaResult } from "./src/ota";
 
 const CONSOLE_URL = "https://apirak272543-ship-it.github.io/Apservice-/rider.html";
@@ -31,11 +31,53 @@ const sessionBridge = `
   })();
 `;
 
+const riderConsoleSync = `
+  (async function () {
+    try {
+      if (!window.__apRiderInteractionBridge && window.ReactNativeWebView) {
+        window.__apRiderInteractionBridge = true;
+        var reportInteraction = function () { window.ReactNativeWebView.postMessage(JSON.stringify({ type: "ap-service-rider-interaction" })); };
+        document.addEventListener("touchstart", reportInteraction, { passive: true });
+        document.addEventListener("scroll", reportInteraction, { passive: true, capture: true });
+        document.addEventListener("click", function (event) {
+          var button = event.target && event.target.closest ? event.target.closest("button") : null;
+          var label = String(button && button.innerText || "").trim();
+          reportInteraction();
+          if (button && /ยืนยัน|บันทึก|อนุมัติ|เปลี่ยนสถานะ|ส่งคำขอ|ปิดงาน/.test(label)) {
+            window.ReactNativeWebView.postMessage(JSON.stringify({ type: "ap-service-rider-confirm-action" }));
+          }
+        }, true);
+      }
+      if (typeof Cloud !== "undefined" && typeof Cloud.pullOrders === "function") {
+        await Cloud.pullOrders();
+        if (typeof Cloud.pullEarnings === "function") await Cloud.pullEarnings();
+        if (typeof render === "function") render();
+      }
+    } catch (_) {}
+    true;
+  })();
+`;
+
+const riderLogoutBridge = `
+  (function () {
+    try {
+      window.localStorage.removeItem(${JSON.stringify(SESSION_STORAGE_KEY)});
+      window.sessionStorage.removeItem(${JSON.stringify(SESSION_STORAGE_KEY)});
+      window.localStorage.removeItem("apcx_rider_session");
+      if (typeof Cloud !== "undefined" && Cloud && typeof Cloud.clearSession === "function") Cloud.clearSession();
+      if (typeof State !== "undefined" && State) State.session = null;
+      if (typeof render === "function") render();
+    } catch (_) {}
+    true;
+  })();
+`;
+
 export default function App() {
   const webRef = useRef<WebView>(null);
   const [canGoBack, setCanGoBack] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
   const [loadError, setLoadError] = useState(false);
+  const [secondaryMenuOpen, setSecondaryMenuOpen] = useState(false);
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [preferences, setPreferences] = useState<NotificationPreferences>(DEFAULT_NOTIFICATION_PREFERENCES);
   const [pushToken, setPushToken] = useState<string | null>(null);
@@ -43,6 +85,8 @@ export default function App() {
   const pushIssueRef = useRef<string | null>(null);
   const availableJobCountRef = useRef<number | null>(null);
   const preferencesRef = useRef<NotificationPreferences>(preferences);
+  const newJobAlarmActiveRef = useRef(false);
+  const lastNewJobAlarmAtRef = useRef(0);
   const [otaLoading, setOtaLoading] = useState(false);
   const [otaResult, setOtaResult] = useState<OtaResult | null>(null);
 
@@ -86,7 +130,14 @@ export default function App() {
         const previousCount = availableJobCountRef.current;
         availableJobCountRef.current = currentCount;
         if (previousCount !== null && currentCount > previousCount) {
+          newJobAlarmActiveRef.current = true;
+          lastNewJobAlarmAtRef.current = Date.now();
           void notifyNewJob(`งานรอรับเพิ่ม ${currentCount - previousCount} งาน · ขณะนี้มี ${currentCount} งาน`, preferencesRef.current);
+        }
+        if (currentCount === 0) newJobAlarmActiveRef.current = false;
+        if (newJobAlarmActiveRef.current && Date.now() - lastNewJobAlarmAtRef.current >= 60000) {
+          lastNewJobAlarmAtRef.current = Date.now();
+          void notifyNewJob(`ยังมี ${currentCount} งานรอรับอยู่`, preferencesRef.current);
         }
       } catch {
         // การตรวจเสียงเป็นงานเสริม จึงไม่ขัดขวาง Rider Console เมื่อเครือข่ายสะดุด
@@ -94,10 +145,22 @@ export default function App() {
     };
     availableJobCountRef.current = null;
     void pollAvailableJobs();
-    const interval = setInterval(() => { void pollAvailableJobs(); }, 5000);
+    const interval = setInterval(() => { void pollAvailableJobs(); }, 10000);
     const appStateSubscription = AppState.addEventListener("change", (state) => {
       if (state === "active") { availableJobCountRef.current = null; void pollAvailableJobs(); }
     });
+    return () => { disposed = true; clearInterval(interval); appStateSubscription.remove(); };
+  }, [session]);
+
+  useEffect(() => {
+    if (!session) return;
+    let disposed = false;
+    const syncRiderConsole = () => {
+      if (!disposed && AppState.currentState === "active") webRef.current?.injectJavaScript(riderConsoleSync);
+    };
+    syncRiderConsole();
+    const interval = setInterval(syncRiderConsole, 10000);
+    const appStateSubscription = AppState.addEventListener("change", (state) => { if (state === "active") syncRiderConsole(); });
     return () => { disposed = true; clearInterval(interval); appStateSubscription.remove(); };
   }, [session]);
 
@@ -128,10 +191,46 @@ export default function App() {
     Alert.alert(result.state === "up-to-date" ? "อัปเดตแอป" : "สถานะ OTA", result.message);
   };
 
+  const refreshConsole = () => {
+    setSecondaryMenuOpen(false);
+    webRef.current?.reload();
+  };
+
+  const openNotificationSettings = () => {
+    setSecondaryMenuOpen(false);
+    setSettingsOpen(true);
+  };
+
+  const handleLogout = () => {
+    Alert.alert("ออกจากระบบ Rider", "ข้อมูลการเข้าสู่ระบบจะถูกลบออกจากเครื่องนี้ และหยุดการแจ้งเตือนของบัญชีเดิม", [
+      { text: "ยกเลิก", style: "cancel" },
+      {
+        text: "ออกจากระบบ",
+        style: "destructive",
+        onPress: () => {
+          const activeSession = session;
+          setSecondaryMenuOpen(false);
+          setSettingsOpen(false);
+          availableJobCountRef.current = null;
+          newJobAlarmActiveRef.current = false;
+          if (activeSession && pushToken) void disablePushToken(activeSession, pushToken).catch(() => undefined);
+          void clearSession();
+          setSession(null);
+          webRef.current?.injectJavaScript(riderLogoutBridge);
+        },
+      },
+    ]);
+  };
+
+  const pushStatus = pushToken ? "อุปกรณ์นี้พร้อมรับการแจ้งเตือน" : pushIssueRef.current ? "ต้องตรวจสอบสิทธิ์แจ้งเตือน" : "กำลังตรวจสอบการแจ้งเตือน";
+
   const handleMessage = (event: { nativeEvent: { data: string } }) => {
     try {
       const payload = JSON.parse(event.nativeEvent.data);
       if (payload?.type === "ap-service-session" && payload.session?.access_token && payload.session?.user?.id) setSession(payload.session as Session);
+      if (payload?.type === "ap-service-rider-interaction") newJobAlarmActiveRef.current = false;
+      if (payload?.type === "ap-service-rider-confirm-action") void notifyRiderActionConfirmed(preferencesRef.current);
+      if (payload?.type === "ap-service-rider-job-accepted") { newJobAlarmActiveRef.current = false; void notifyRiderJobAccepted(preferencesRef.current); }
     } catch {
       // ข้อความจากหน้าเว็บที่ไม่ใช่ bridge จะไม่กระทบคอนโซล
     }
@@ -141,12 +240,13 @@ export default function App() {
 
   return <SafeAreaView style={styles.page}>
     <StatusBar barStyle="dark-content" backgroundColor="#FFFFFF" />
-    <View style={styles.nativeHeader}><View><Text style={styles.brand}>AP Rider</Text><Text style={styles.caption}>Rider Console · ข้อมูลจริงจาก AP Service</Text></View><View style={styles.headerActions}><Pressable accessibilityLabel="รีเฟรชข้อมูลไรเดอร์" style={styles.iconButton} onPress={() => webRef.current?.reload()}><Text style={styles.iconText}>↻</Text></Pressable><Pressable accessibilityLabel="ตั้งค่าการแจ้งเตือน" style={styles.settingsButton} onPress={() => setSettingsOpen(true)}><Text style={styles.settingsButtonText}>เสียงแจ้งเตือน</Text></Pressable></View></View>
+    <View style={styles.nativeHeader}><View><Text style={styles.brand}>AP Rider</Text><Text style={styles.caption}>Rider Console · ข้อมูลจริงจาก AP Service</Text></View><View style={styles.headerActions}><Pressable accessibilityLabel="รีเฟรชข้อมูลไรเดอร์" style={styles.iconButton} onPress={refreshConsole}><Text style={styles.iconText}>↻</Text></Pressable><Pressable accessibilityLabel="เมนูเพิ่มเติม" style={styles.iconButton} onPress={() => setSecondaryMenuOpen(true)}><Text style={styles.moreIcon}>•••</Text></Pressable></View></View>
     <View style={styles.webShell}><WebView ref={webRef} source={{ uri: CONSOLE_URL }} originWhitelist={["https://*", "http://*"]} injectedJavaScriptBeforeContentLoaded={sessionBridge} injectedJavaScript={sessionBridge} onMessage={handleMessage} onLoadStart={() => { setIsLoading(true); setLoadError(false); }} onLoadEnd={() => setIsLoading(false)} onError={() => setLoadError(true)} onNavigationStateChange={(state) => setCanGoBack(state.canGoBack)} javaScriptEnabled domStorageEnabled cacheEnabled thirdPartyCookiesEnabled sharedCookiesEnabled pullToRefreshEnabled allowsBackForwardNavigationGestures />{isLoading ? <View style={styles.loadingOverlay}><ActivityIndicator color="#1457D9" /><Text style={styles.loadingText}>กำลังเปิด Rider Console…</Text></View> : null}</View>
-    <Modal visible={settingsOpen} animationType="slide" transparent onRequestClose={() => setSettingsOpen(false)}><View style={styles.modalBackdrop}><View style={styles.sheet}><View style={styles.sheetHeader}><View><Text style={styles.sheetTitle}>การแจ้งเตือน AP Rider</Text><Text style={styles.sheetSubtitle}>คอนโซลยังใช้ข้อมูลและสิทธิ์เดียวกับเว็บไซต์</Text></View><Pressable style={styles.closeButton} onPress={() => setSettingsOpen(false)}><Text style={styles.closeText}>ปิด</Text></Pressable></View><View style={styles.settingRow}><View style={styles.settingCopy}><Text style={styles.settingTitle}>แจ้งเตือนงานและข้อความใหม่</Text><Text style={styles.settingBody}>เมื่อแอปเปิดอยู่ จะร้องทันทีเมื่อจำนวนงานรอรับใน Rider Console เพิ่มขึ้น</Text></View><Switch value={preferences.enabled} trackColor={{ true: "#1457D9" }} onValueChange={(enabled) => { void updatePreferences({ ...preferences, enabled }); }} /></View><Text style={styles.settingTitle}>เลือกเสียงแจ้งเตือน</Text><View style={styles.toneList}>{TONES.map((tone) => <Pressable key={tone} style={[styles.tone, preferences.tone === tone && styles.toneActive]} onPress={() => { void updatePreferences({ ...preferences, tone }); }}><Text style={[styles.toneText, preferences.tone === tone && styles.toneTextActive]}>{notificationToneLabel(tone)}</Text></Pressable>)}</View><Pressable style={styles.secondaryButton} onPress={() => { void playRiderNotificationPreview(preferences); }}><Text style={styles.secondaryText}>ทดสอบเสียงที่เลือก</Text></Pressable><View style={styles.otaCard}><Text style={styles.settingTitle}>อัปเดตภายในแอป</Text><Text style={styles.settingBody}>ใช้สำหรับแก้ไขหน้าจอและฟังก์ชันที่ไม่เปลี่ยนส่วนระบบ Android</Text>{otaResult ? <Text style={styles.otaText}>{otaResult.message}</Text> : null}<Pressable style={styles.primaryButton} disabled={otaLoading} onPress={() => { void checkOta(); }}><Text style={styles.primaryText}>{otaLoading ? "กำลังตรวจสอบ…" : "ตรวจสอบการอัปเดต"}</Text></Pressable></View></View></View></Modal>
+    <Modal visible={secondaryMenuOpen} animationType="fade" transparent onRequestClose={() => setSecondaryMenuOpen(false)}><View style={styles.modalBackdrop}><Pressable style={StyleSheet.absoluteFillObject} onPress={() => setSecondaryMenuOpen(false)} /><View style={styles.menuSheet}><View style={styles.sheetHeader}><View><Text style={styles.sheetTitle}>เมนูเพิ่มเติม</Text><Text style={styles.sheetSubtitle}>เครื่องมือของ AP Rider</Text></View><Pressable style={styles.closeButton} onPress={() => setSecondaryMenuOpen(false)}><Text style={styles.closeText}>ปิด</Text></Pressable></View><Pressable style={styles.menuItem} onPress={refreshConsole}><View style={styles.menuCopy}><Text style={styles.menuTitle}>รีเฟรชข้อมูล</Text><Text style={styles.menuBody}>ดึงสถานะงานล่าสุดจาก Rider Console</Text></View><Text style={styles.menuArrow}>›</Text></Pressable><Pressable style={styles.menuItem} onPress={openNotificationSettings}><View style={styles.menuCopy}><Text style={styles.menuTitle}>การแจ้งเตือนและเสียง</Text><Text style={styles.menuBody}>{pushStatus}</Text></View><Text style={styles.menuArrow}>›</Text></Pressable><Pressable style={styles.menuItem} disabled={otaLoading} onPress={() => { setSecondaryMenuOpen(false); void checkOta(); }}><View style={styles.menuCopy}><Text style={styles.menuTitle}>ตรวจสอบการอัปเดต</Text><Text style={styles.menuBody}>{otaLoading ? "กำลังตรวจสอบ…" : otaResult?.message || "ค้นหาอัปเดตภายในแอป"}</Text></View><Text style={styles.menuArrow}>›</Text></Pressable><Pressable style={[styles.menuItem, styles.menuItemDanger]} onPress={handleLogout}><View style={styles.menuCopy}><Text style={styles.menuDangerTitle}>ออกจากระบบ</Text><Text style={styles.menuBody}>ล้างบัญชีออกจากอุปกรณ์นี้</Text></View><Text style={styles.menuDangerTitle}>ออก</Text></Pressable></View></View></Modal>
+    <Modal visible={settingsOpen} animationType="slide" transparent onRequestClose={() => setSettingsOpen(false)}><View style={styles.modalBackdrop}><View style={styles.sheet}><View style={styles.sheetHeader}><View><Text style={styles.sheetTitle}>การแจ้งเตือน AP Rider</Text><Text style={styles.sheetSubtitle}>คอนโซลยังใช้ข้อมูลและสิทธิ์เดียวกับเว็บไซต์</Text></View><Pressable style={styles.closeButton} onPress={() => setSettingsOpen(false)}><Text style={styles.closeText}>ปิด</Text></Pressable></View><View style={styles.statusCard}><Text style={styles.settingTitle}>สถานะการแจ้งเตือน</Text><Text style={styles.settingBody}>{pushStatus}</Text></View><View style={styles.settingRow}><View style={styles.settingCopy}><Text style={styles.settingTitle}>แจ้งเตือนงานและข้อความใหม่</Text><Text style={styles.settingBody}>เมื่อแอปเปิดอยู่ จะร้องทันทีเมื่อจำนวนงานรอรับใน Rider Console เพิ่มขึ้น</Text></View><Switch value={preferences.enabled} trackColor={{ true: "#1457D9" }} onValueChange={(enabled) => { void updatePreferences({ ...preferences, enabled }); }} /></View><Text style={styles.settingTitle}>เลือกเสียงแจ้งเตือน</Text><View style={styles.toneList}>{TONES.map((tone) => <Pressable key={tone} style={[styles.tone, preferences.tone === tone && styles.toneActive]} onPress={() => { void updatePreferences({ ...preferences, tone }); }}><Text style={[styles.toneText, preferences.tone === tone && styles.toneTextActive]}>{notificationToneLabel(tone)}</Text></Pressable>)}</View><Pressable style={styles.secondaryButton} onPress={() => { void playRiderNotificationPreview(preferences); }}><Text style={styles.secondaryText}>ทดสอบเสียงที่เลือก</Text></Pressable><View style={styles.otaCard}><Text style={styles.settingTitle}>อัปเดตภายในแอป</Text><Text style={styles.settingBody}>ใช้สำหรับแก้ไขหน้าจอและฟังก์ชันที่ไม่เปลี่ยนส่วนระบบ Android</Text>{otaResult ? <Text style={styles.otaText}>{otaResult.message}</Text> : null}<Pressable style={styles.primaryButton} disabled={otaLoading} onPress={() => { void checkOta(); }}><Text style={styles.primaryText}>{otaLoading ? "กำลังตรวจสอบ…" : "ตรวจสอบการอัปเดต"}</Text></Pressable></View></View></View></Modal>
   </SafeAreaView>;
 }
 
 const styles = StyleSheet.create({
-  page: { flex: 1, backgroundColor: "#FFFFFF" }, nativeHeader: { minHeight: 58, paddingHorizontal: 16, paddingVertical: 9, flexDirection: "row", alignItems: "center", justifyContent: "space-between", borderBottomWidth: 1, borderBottomColor: "#E5E9F3", backgroundColor: "#FFFFFF" }, brand: { color: "#173A78", fontSize: 18, fontWeight: "900" }, caption: { color: "#66748C", fontSize: 10, marginTop: 2 }, headerActions: { flexDirection: "row", alignItems: "center", gap: 8 }, iconButton: { width: 34, height: 34, borderRadius: 17, alignItems: "center", justifyContent: "center", backgroundColor: "#EAF0FF" }, iconText: { color: "#1457D9", fontSize: 20, fontWeight: "800" }, settingsButton: { backgroundColor: "#1457D9", paddingHorizontal: 10, paddingVertical: 9, borderRadius: 11 }, settingsButtonText: { color: "#FFFFFF", fontWeight: "800", fontSize: 11 }, webShell: { flex: 1, backgroundColor: "#F7F9FF" }, loadingOverlay: { ...StyleSheet.absoluteFillObject, backgroundColor: "#FFFFFF", alignItems: "center", justifyContent: "center", gap: 10 }, loadingText: { color: "#66748C", fontSize: 13 }, errorPage: { flex: 1, justifyContent: "center", alignItems: "center", padding: 28, backgroundColor: "#F7F9FF" }, errorTitle: { color: "#173A78", fontSize: 21, fontWeight: "900", textAlign: "center" }, errorText: { color: "#66748C", textAlign: "center", marginTop: 8, lineHeight: 20 }, primaryButton: { marginTop: 14, backgroundColor: "#1457D9", borderRadius: 12, paddingVertical: 12, paddingHorizontal: 16, alignItems: "center" }, primaryText: { color: "#FFFFFF", fontWeight: "900", fontSize: 13 }, modalBackdrop: { flex: 1, justifyContent: "flex-end", backgroundColor: "rgba(9, 18, 40, .35)" }, sheet: { backgroundColor: "#FFFFFF", borderTopLeftRadius: 24, borderTopRightRadius: 24, padding: 20, paddingBottom: 32 }, sheetHeader: { flexDirection: "row", alignItems: "flex-start", justifyContent: "space-between", marginBottom: 18 }, sheetTitle: { color: "#173A78", fontSize: 20, fontWeight: "900" }, sheetSubtitle: { color: "#66748C", fontSize: 11, marginTop: 3 }, closeButton: { backgroundColor: "#EAF0FF", paddingHorizontal: 12, paddingVertical: 8, borderRadius: 10 }, closeText: { color: "#1457D9", fontWeight: "800", fontSize: 12 }, settingRow: { flexDirection: "row", gap: 14, alignItems: "center", paddingVertical: 14, borderTopWidth: 1, borderTopColor: "#E8ECF5", borderBottomWidth: 1, borderBottomColor: "#E8ECF5", marginBottom: 16 }, settingCopy: { flex: 1 }, settingTitle: { color: "#173A78", fontSize: 14, fontWeight: "900" }, settingBody: { color: "#66748C", fontSize: 11, lineHeight: 17, marginTop: 4 }, toneList: { flexDirection: "row", flexWrap: "wrap", gap: 8, marginTop: 9 }, tone: { borderWidth: 1, borderColor: "#C7D2EE", borderRadius: 10, paddingVertical: 9, paddingHorizontal: 10 }, toneActive: { borderColor: "#1457D9", backgroundColor: "#1457D9" }, toneText: { color: "#1457D9", fontWeight: "800", fontSize: 11 }, toneTextActive: { color: "#FFFFFF" }, secondaryButton: { borderWidth: 1, borderColor: "#1457D9", marginTop: 12, borderRadius: 12, paddingVertical: 11, alignItems: "center" }, secondaryText: { color: "#1457D9", fontWeight: "900", fontSize: 12 }, otaCard: { backgroundColor: "#F1F5FF", borderRadius: 14, padding: 14, marginTop: 18 }, otaText: { color: "#795800", fontSize: 11, lineHeight: 16, marginTop: 7 },
+  page: { flex: 1, backgroundColor: "#FFFFFF" }, nativeHeader: { minHeight: 58, paddingHorizontal: 16, paddingVertical: 9, flexDirection: "row", alignItems: "center", justifyContent: "space-between", borderBottomWidth: 1, borderBottomColor: "#E5E9F3", backgroundColor: "#FFFFFF" }, brand: { color: "#173A78", fontSize: 18, fontWeight: "900" }, caption: { color: "#66748C", fontSize: 10, marginTop: 2 }, headerActions: { flexDirection: "row", alignItems: "center", gap: 8 }, iconButton: { width: 34, height: 34, borderRadius: 17, alignItems: "center", justifyContent: "center", backgroundColor: "#EAF0FF" }, iconText: { color: "#1457D9", fontSize: 20, fontWeight: "800" }, moreIcon: { color: "#1457D9", fontSize: 15, fontWeight: "900", letterSpacing: 1, marginTop: -6 }, webShell: { flex: 1, backgroundColor: "#F7F9FF" }, loadingOverlay: { ...StyleSheet.absoluteFillObject, backgroundColor: "#FFFFFF", alignItems: "center", justifyContent: "center", gap: 10 }, loadingText: { color: "#66748C", fontSize: 13 }, errorPage: { flex: 1, justifyContent: "center", alignItems: "center", padding: 28, backgroundColor: "#F7F9FF" }, errorTitle: { color: "#173A78", fontSize: 21, fontWeight: "900", textAlign: "center" }, errorText: { color: "#66748C", textAlign: "center", marginTop: 8, lineHeight: 20 }, primaryButton: { marginTop: 14, backgroundColor: "#1457D9", borderRadius: 12, paddingVertical: 12, paddingHorizontal: 16, alignItems: "center" }, primaryText: { color: "#FFFFFF", fontWeight: "900", fontSize: 13 }, modalBackdrop: { flex: 1, justifyContent: "flex-end", backgroundColor: "rgba(9, 18, 40, .35)" }, sheet: { backgroundColor: "#FFFFFF", borderTopLeftRadius: 24, borderTopRightRadius: 24, padding: 20, paddingBottom: 32 }, menuSheet: { backgroundColor: "#FFFFFF", borderTopLeftRadius: 24, borderTopRightRadius: 24, padding: 20, paddingBottom: 32 }, sheetHeader: { flexDirection: "row", alignItems: "flex-start", justifyContent: "space-between", marginBottom: 18 }, sheetTitle: { color: "#173A78", fontSize: 20, fontWeight: "900" }, sheetSubtitle: { color: "#66748C", fontSize: 11, marginTop: 3 }, closeButton: { backgroundColor: "#EAF0FF", paddingHorizontal: 12, paddingVertical: 8, borderRadius: 10 }, closeText: { color: "#1457D9", fontWeight: "800", fontSize: 12 }, menuItem: { flexDirection: "row", alignItems: "center", gap: 12, paddingVertical: 14, borderTopWidth: 1, borderTopColor: "#E8ECF5" }, menuItemDanger: { marginTop: 6, borderBottomWidth: 1, borderBottomColor: "#F4D7D7" }, menuCopy: { flex: 1 }, menuTitle: { color: "#173A78", fontSize: 14, fontWeight: "900" }, menuDangerTitle: { color: "#BA2F2F", fontSize: 13, fontWeight: "900" }, menuBody: { color: "#66748C", fontSize: 11, lineHeight: 17, marginTop: 3 }, menuArrow: { color: "#1457D9", fontSize: 25, fontWeight: "400" }, statusCard: { backgroundColor: "#F1F5FF", borderRadius: 14, padding: 13, marginBottom: 14 }, settingRow: { flexDirection: "row", gap: 14, alignItems: "center", paddingVertical: 14, borderTopWidth: 1, borderTopColor: "#E8ECF5", borderBottomWidth: 1, borderBottomColor: "#E8ECF5", marginBottom: 16 }, settingCopy: { flex: 1 }, settingTitle: { color: "#173A78", fontSize: 14, fontWeight: "900" }, settingBody: { color: "#66748C", fontSize: 11, lineHeight: 17, marginTop: 4 }, toneList: { flexDirection: "row", flexWrap: "wrap", gap: 8, marginTop: 9 }, tone: { borderWidth: 1, borderColor: "#C7D2EE", borderRadius: 10, paddingVertical: 9, paddingHorizontal: 10 }, toneActive: { borderColor: "#1457D9", backgroundColor: "#1457D9" }, toneText: { color: "#1457D9", fontWeight: "800", fontSize: 11 }, toneTextActive: { color: "#FFFFFF" }, secondaryButton: { borderWidth: 1, borderColor: "#1457D9", marginTop: 12, borderRadius: 12, paddingVertical: 11, alignItems: "center" }, secondaryText: { color: "#1457D9", fontWeight: "900", fontSize: 12 }, otaCard: { backgroundColor: "#F1F5FF", borderRadius: 14, padding: 14, marginTop: 18 }, otaText: { color: "#795800", fontSize: 11, lineHeight: 16, marginTop: 7 },
 });

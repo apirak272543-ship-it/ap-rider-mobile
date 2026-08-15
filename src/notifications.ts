@@ -24,7 +24,7 @@ async function createRiderChannels() {
     name: `งานไรเดอร์ · ${toneLabels[tone]}`,
     description: "ใช้สำหรับงานใหม่และสถานะงานของไรเดอร์",
     importance: Notifications.AndroidImportance.MAX,
-    vibrationPattern: tone === "ap_priority" ? [0, 350, 160, 350, 160, 350] : [0, 250, 180, 250],
+    vibrationPattern: tone === "ap_priority" ? [0, 700, 160, 700, 160, 700, 160, 700] : [0, 250, 180, 250],
     sound: `${tone}.wav`,
     lockscreenVisibility: Notifications.AndroidNotificationVisibility.PUBLIC,
   })));
@@ -46,8 +46,24 @@ export async function setupRiderNotifications() {
 export async function notifyNewJob(title: string, preferences: NotificationPreferences) {
   if (!preferences.enabled) return;
   await Notifications.scheduleNotificationAsync({
-    content: { title: "มีงานใหม่สำหรับคุณ", body: title, sound: `${preferences.tone}.wav`, data: { screen: "jobs", kind: "job" } },
-    trigger: Platform.OS === "android" ? { channelId: riderChannelId(preferences.tone) } : null,
+    content: { title: "มีงานใหม่รอรับ", body: title, sound: "ap_priority.wav", priority: Notifications.AndroidNotificationPriority.MAX, data: { screen: "jobs", kind: "job" } },
+    trigger: Platform.OS === "android" ? { channelId: riderChannelId("ap_priority") } : null,
+  });
+}
+
+export async function notifyRiderJobAccepted(preferences: NotificationPreferences) {
+  if (!preferences.enabled) return;
+  await Notifications.scheduleNotificationAsync({
+    content: { title: "รับงานสำเร็จ", body: "งานถูกเพิ่มในรายการงานของฉันแล้ว", sound: "ap_chime.wav", data: { screen: "jobs", kind: "accepted" } },
+    trigger: Platform.OS === "android" ? { channelId: riderChannelId("ap_chime") } : null,
+  });
+}
+
+export async function notifyRiderActionConfirmed(preferences: NotificationPreferences) {
+  if (!preferences.enabled) return;
+  await Notifications.scheduleNotificationAsync({
+    content: { title: "ยืนยันคำสั่งแล้ว", body: "ระบบกำลังดำเนินการ", sound: "ap_chime.wav", data: { kind: "action" } },
+    trigger: Platform.OS === "android" ? { channelId: riderChannelId("ap_chime") } : null,
   });
 }
 
