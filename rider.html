@@ -677,5 +677,6 @@
     (()=>{const baseEnsure=RiderErrorMonitor.ensureModal.bind(RiderErrorMonitor),baseOpen=RiderErrorMonitor.open.bind(RiderErrorMonitor);let opening=false;const bind=()=>{const modal=$('#riderErrorReportModal');if(!modal||modal.dataset.safeDismiss)return;modal.dataset.safeDismiss='true';modal.setAttribute('aria-hidden','true');modal.addEventListener('pointerdown',event=>{if(event.target===modal)RiderErrorMonitor.close()});document.addEventListener('keydown',event=>{if(event.key==='Escape'&&modal.classList.contains('open'))RiderErrorMonitor.close()})};RiderErrorMonitor.ensureModal=function(){baseEnsure();bind()};RiderErrorMonitor.open=function(){if(opening)return;opening=true;try{baseOpen();$('#riderErrorReportModal')?.setAttribute('aria-hidden','false')}finally{requestAnimationFrame(()=>opening=false)}}})();
   </script>
   <script src="./rider_payout_proof_patch.js?v=withdrawal-proof-v1"></script>
+<script src="./shared/ap-central-config-fallback.js?v=central-config-v1"></script>
 </body>
 </html>

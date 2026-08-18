@@ -23,13 +23,44 @@
     app(active, content);
     const access = await M.auth.requireRole('rider', { loginUrl: 'login.html', container: $('[data-page-content]') });
     if (!access) return null;
+    const controls = await M.request(`account_controls?select=status,suspension_reason,feature_overrides&user_id=eq.${encodeURIComponent(access.user.id)}&limit=1`, { private: true, cacheTtlMs: 10_000, cacheKey: `rider-account-control:${access.user.id}` });
+    const control = controls?.[0] || { status: 'active', feature_overrides: {} };
+    if (control.status === 'suspended') {
+      $('[data-page-content]').innerHTML = M.ui.error('บัญชีไรเดอร์ถูกระงับการใช้งาน', control.suspension_reason || 'กรุณาติดต่อผู้ดูแลระบบ');
+      return null;
+    }
     const rider = await ownRider(access.user);
     if (!rider) {
       $('[data-page-content]').innerHTML = M.ui.error('ไม่พบโปรไฟล์ไรเดอร์', 'กรุณาติดต่อผู้ดูแลระบบ');
       return null;
     }
-    return { ...access, rider };
+    const config = await readCentralConfig(access.user.id);
+    mountCentralConfig(config);
+    return { ...access, rider, control, config };
   }
+
+  async function readCentralConfig(userId) {
+    const read = async (path, options = {}) => { try { return await M.request(path, options); } catch (error) { console.warn('Rider central config read skipped', error); return []; } };
+    const [publicRows, paymentRows] = await Promise.all([
+      read('platform_configs?select=key,value&key=in.(brand_public,customer_promotions)', { cacheTtlMs: 30_000, cacheKey: 'rider-platform-public-configs' }),
+      read('platform_configs?select=key,value&key=eq.payment_public', { private: true, cacheTtlMs: 30_000, cacheKey: `rider-payment-public:${userId}` }),
+    ]);
+    const rows = [...(publicRows || []), ...(paymentRows || [])];
+    return { brand: rows.find(row => row.key === 'brand_public')?.value || {}, promotions: rows.find(row => row.key === 'customer_promotions')?.value || {}, payment: rows.find(row => row.key === 'payment_public')?.value || {} };
+  }
+
+  const configValue = (value, keys, fallback = '') => keys.map(key => value?.[key]).find(item => item !== undefined && item !== null && String(item).trim() !== '') ?? fallback;
+  const safeAsset = value => { const text = String(value || '').trim(); return /^https?:/i.test(text) || text.toLowerCase().startsWith('data:image/') ? text : ''; };
+  function centralConfigMarkup(config) {
+    const brand = config?.brand || {}, promotions = Array.isArray(config?.promotions?.items) ? config.promotions.items.filter(item => item && item.active !== false) : [];
+    const name = configValue(brand, ['brand_name', 'brandName', 'name', 'title'], 'AP Service');
+    const logo = safeAsset(configValue(brand, ['logo_url', 'logoUrl', 'logo']));
+    const background = safeAsset(configValue(brand, ['background_url', 'backgroundUrl', 'background']));
+    const banner = safeAsset(configValue(brand, ['banner_url', 'bannerUrl', 'banner']));
+    const payment = config?.payment || {}, provider = configValue(payment, ['provider'], 'ยังไม่กำหนด');
+    return `<section class="mpa-card" data-central-config-card style="margin-bottom:18px;overflow:hidden;padding:0"><div style="display:flex;align-items:center;gap:12px;padding:14px 16px;background:${background ? `linear-gradient(90deg,rgba(16,43,73,.78),rgba(16,43,73,.2)),url('${h(background)}') center/cover` : 'linear-gradient(135deg,#eaf6ff,#fff)'};color:${background ? '#fff' : 'inherit'}"><div style="width:52px;height:52px;border-radius:15px;overflow:hidden;display:grid;place-items:center;background:rgba(255,255,255,.78);font-size:25px;flex:0 0 auto">${logo ? `<img src="${h(logo)}" alt="" style="width:100%;height:100%;object-fit:cover">` : '🛵'}</div><div><strong>${h(name)}</strong><div style="font-size:11px;opacity:.85">ค่ากลางจาก Admin · ช่องทางชำระเงิน: ${h(provider)}</div></div></div>${banner ? `<img src="${h(banner)}" alt="แบนเนอร์จาก Admin" loading="lazy" style="display:block;width:100%;max-height:150px;object-fit:cover">` : ''}<div style="padding:12px 16px"><strong style="font-size:12px">โปรโมชันที่เผยแพร่</strong>${promotions.length ? `<div style="display:grid;gap:8px;margin-top:9px">${promotions.slice(0, 4).map(item => `<div style="display:flex;gap:9px;align-items:center"><div style="width:38px;height:38px;border-radius:10px;overflow:hidden;background:#eaf6ff;display:grid;place-items:center;flex:0 0 auto">${safeAsset(item.image_url) ? `<img src="${h(safeAsset(item.image_url))}" alt="" style="width:100%;height:100%;object-fit:cover">` : '✦'}</div><div><strong style="font-size:11px">${h(item.badge ? `${item.badge} · ` : '')}${h(item.title || 'โปรโมชัน')}</strong><div class="mpa-muted">${h(item.description || '')}</div></div></div>`).join('')}</div>` : '<p class="mpa-muted" style="margin:8px 0 0">ยังไม่มีโปรโมชันที่เปิดเผย</p>'}<p class="mpa-muted" style="margin:10px 0 0">กฎธุรกิจส่วนกลางไม่ถูกเปิดให้อ่านจากบทบาทไรเดอร์ตาม RLS ปัจจุบัน</p></div></section>`;
+  }
+  function mountCentralConfig(config) { const host = $('[data-page-content]'); if (!host) return; host.insertAdjacentHTML('afterbegin', centralConfigMarkup(config)); }
 
   const ordersPath = riderId => `delivery_orders?select=id,status,payable,store_name,pickup_address,delivery_address,customer_name,ordered_at&rider_id=eq.${encodeURIComponent(riderId)}&order=ordered_at.desc&limit=150`;
   const claimableStatuses = Object.freeze([C.contracts.orderStatus.STORE_ACCEPTED, C.contracts.orderStatus.PREPARING]);
