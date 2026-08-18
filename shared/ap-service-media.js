@@ -242,6 +242,25 @@
     return Object.freeze({ ...asset, url: resolvedUrl });
   }
 
+  function createInput({ accept = ACCEPTED_IMAGE_TYPES.join(','), camera = false, capture = 'environment', multiple = false, id = '', name = '', className = '', attributes = {}, onChange } = {}) {
+    if (typeof document === 'undefined') fail('ไม่สามารถสร้างตัวเลือกไฟล์นอก browser ได้');
+    const input = document.createElement('input');
+    input.type = 'file';
+    input.accept = accept;
+    input.multiple = !!multiple;
+    if (camera) input.setAttribute('capture', capture);
+    if (id) input.id = id;
+    if (name) input.name = name;
+    if (className) input.className = className;
+    Object.entries(attributes || {}).forEach(([key, value]) => {
+      if (value === false || value === null || value === undefined) return;
+      if (value === true) input.setAttribute(key, '');
+      else input.setAttribute(key, String(value));
+    });
+    if (typeof onChange === 'function') input.addEventListener('change', onChange);
+    return input;
+  }
+
   async function uploadPublicCatalogImage(file, options = {}) { return uploadPublicImage(file, { ...options, bucket: 'catalog-media' }); }
 
   async function createSignedImageUrl({ url, publishableKey, accessToken, bucket, path, expiresIn = 300 } = {}) {
@@ -281,13 +300,14 @@
 
   root.APServiceMediaProgress = progress;
   root.APServiceMedia = Object.freeze({
-    version: 'shared-media-v4',
+    version: 'shared-media-v5',
     policy: Object.freeze({ sourceImageMaxBytes: SOURCE_IMAGE_MAX_BYTES, outputImageMaxBytes: DEFAULT_OUTPUT_MAX_BYTES, acceptedImageTypes: ACCEPTED_IMAGE_TYPES, profiles: MEDIA_PROFILES }),
     prepareImage,
     mediaProfile,
     inferMediaContract,
     uploadPublicImage,
     uploadPublicCatalogImage,
+    createInput,
     uploadPrivateImage,
     createSignedImageUrl,
     registerMediaAsset,
