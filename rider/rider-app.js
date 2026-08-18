@@ -32,6 +32,8 @@
   }
 
   const ordersPath = riderId => `delivery_orders?select=id,status,payable,store_name,pickup_address,delivery_address,customer_name,ordered_at&rider_id=eq.${encodeURIComponent(riderId)}&order=ordered_at.desc&limit=150`;
+  const claimableStatuses = Object.freeze([C.contracts.orderStatus.STORE_ACCEPTED, C.contracts.orderStatus.PREPARING]);
+  const availableOrdersPath = () => `delivery_orders?select=id,status,payable,store_name,pickup_address,delivery_address,customer_name,ordered_at&rider_id=is.null&status=in.(${claimableStatuses.map(status => encodeURIComponent(status)).join(',')})&order=ordered_at.asc&limit=100`;
 
   async function login() {
     document.body.innerHTML = `<main class="mpa-shell" style="min-height:100vh;display:grid;place-items:center"><section class="mpa-card" style="width:min(430px,100%)"><h1>เข้าสู่ระบบไรเดอร์</h1><p class="mpa-muted">ใช้บัญชีไรเดอร์ที่ได้รับสิทธิ์ใน AP Service</p><form id="login"><div class="mpa-field"><label>อีเมล</label><input id="email" type="email" required></div><div class="mpa-field"><label>รหัสผ่าน</label><input id="password" type="password" required></div><button class="mpa-button" style="width:100%">เข้าสู่ระบบไรเดอร์</button></form><p class="mpa-muted"><a href="../rider.html">เปิด Rider fallback เดิม</a></p></section></main>`;
@@ -63,15 +65,33 @@
   }
 
   async function jobs() {
-    const ctx = await gate('jobs', `<div class="mpa-page-head"><div><h1>งานจัดส่ง</h1><p>งานที่ได้รับมอบหมายให้บัญชีไรเดอร์นี้</p></div></div><section id="list" class="mpa-card">${M.ui.loading('กำลังโหลดงานจัดส่ง…')}</section>`);
+    const ctx = await gate('jobs', `<div class="mpa-page-head"><div><h1>งานจัดส่ง</h1><p>รับงานใหม่ที่พร้อมให้บริการ หรือเปิดงานที่รับไว้แล้ว</p></div></div><section id="list" class="mpa-card">${M.ui.loading('กำลังโหลดงานจัดส่ง…')}</section>`);
     if (!ctx) return;
-    const scope = pageScope('rider:jobs'); const path = ordersPath(ctx.rider.id); let lastSignature = '';
-    const render = rows => {
-      const signature = JSON.stringify((rows || []).map(row => [row.id, row.status, row.ordered_at])); if (signature === lastSignature) return; lastSignature = signature;
-      $('#list').innerHTML = rows.length ? `<div class="mpa-table-wrap"><table class="mpa-table"><thead><tr><th>ร้านค้า</th><th>สถานะ</th><th>ปลายทาง</th><th>งาน</th></tr></thead><tbody>${rows.map(row => `<tr><td>${h(row.store_name || '-')}</td><td><span class="mpa-badge">${h(row.status)}</span></td><td>${h(row.delivery_address || '-')}</td><td><a class="mpa-button" href="delivery.html?id=${encodeURIComponent(row.id)}">เปิดงาน</a></td></tr>`).join('')}</tbody></table></div>` : M.ui.empty('ยังไม่มีงานที่ได้รับมอบหมาย');
+    const scope = pageScope('rider:jobs'); const assignedPath = ordersPath(ctx.rider.id); const availablePath = availableOrdersPath(); let lastSignature = '';
+    const read = forceFresh => Promise.all([
+      scope.request(assignedPath, { private: true, cacheTtlMs: 10_000, forceFresh, cacheKey: `rider-jobs:${ctx.rider.id}` }),
+      scope.request(availablePath, { private: true, cacheTtlMs: 10_000, forceFresh, cacheKey: 'rider-available-jobs' }),
+    ]).then(([assigned, available]) => ({ assigned: assigned || [], available: available || [] }));
+    const render = ({ assigned, available }) => {
+      const signature = JSON.stringify({ assigned: assigned.map(row => [row.id, row.status, row.ordered_at]), available: available.map(row => [row.id, row.status, row.ordered_at]) }); if (signature === lastSignature) return; lastSignature = signature;
+      const assignedTable = assigned.length ? `<div class="mpa-table-wrap"><table class="mpa-table"><thead><tr><th>ร้านค้า</th><th>สถานะ</th><th>ปลายทาง</th><th>งาน</th></tr></thead><tbody>${assigned.map(row => `<tr><td>${h(row.store_name || '-')}</td><td><span class="mpa-badge">${h(row.status)}</span></td><td>${h(row.delivery_address || '-')}</td><td><a class="mpa-button" href="delivery.html?id=${encodeURIComponent(row.id)}">เปิดงาน</a></td></tr>`).join('')}</tbody></table></div>` : M.ui.empty('ยังไม่มีงานที่รับไว้');
+      const availableTable = available.length ? `<div class="mpa-table-wrap"><table class="mpa-table"><thead><tr><th>ร้านค้า</th><th>สถานะ</th><th>จุดรับ / ปลายทาง</th><th>ดำเนินการ</th></tr></thead><tbody>${available.map(row => `<tr><td>${h(row.store_name || '-')}</td><td><span class="mpa-badge">${h(row.status)}</span></td><td>${h(row.pickup_address || '-')}<br><span class="mpa-muted">→ ${h(row.delivery_address || '-')}</span></td><td><button class="mpa-button" data-claim-job="${h(row.id)}">รับงาน</button></td></tr>`).join('')}</tbody></table></div>` : M.ui.empty('ยังไม่มีงานใหม่ที่พร้อมรับ');
+      $('#list').innerHTML = `<section><div class="mpa-page-head"><div><h2 style="margin:0">งานใหม่ที่พร้อมรับ</h2><p class="mpa-muted">เมื่อกดรับงาน ระบบจะผูกงานกับบัญชีของคุณและเปลี่ยนเป็น “${h(C.contracts.orderStatus.RIDER_PICKUP)}” เพียงครั้งเดียว</p></div></div>${availableTable}</section><section style="margin-top:24px"><h2 style="margin:0 0 10px">งานที่รับไว้แล้ว</h2>${assignedTable}</section>`;
+      document.querySelectorAll('[data-claim-job]').forEach(button => button.addEventListener('click', async () => {
+        const job = available.find(row => row.id === button.dataset.claimJob); if (!job) return;
+        const next = C.contracts.orderStatus.RIDER_PICKUP; const transition = C.order.canTransition({ from: job.status, to: next, actor: 'rider' });
+        if (!transition.ok) { M.ui.setNotice(transition.reason, 'error'); return; }
+        if (!confirm(`รับงานจาก ${job.store_name || 'ร้านค้า'} ใช่หรือไม่?`)) return;
+        button.disabled = true; button.textContent = 'กำลังรับงาน…';
+        try {
+          const claimed = await M.request(`delivery_orders?id=eq.${encodeURIComponent(job.id)}&rider_id=is.null&status=eq.${encodeURIComponent(job.status)}`, { method: 'PATCH', private: true, headers: { Prefer: 'return=representation' }, body: JSON.stringify({ rider_id: ctx.rider.id, rider_name: ctx.rider.name, status: next, accepted_at: M.ui.nowIso(), updated_at: M.ui.nowIso() }) });
+          if (!Array.isArray(claimed) || !claimed.length) throw new Error('งานนี้ถูกรับหรือเปลี่ยนสถานะโดยไรเดอร์คนอื่นแล้ว');
+          M.ui.setNotice('รับงานแล้ว'); location.assign(`delivery.html?id=${encodeURIComponent(job.id)}`);
+        } catch (err) { button.disabled = false; button.textContent = 'รับงาน'; M.ui.setNotice(err.message || 'รับงานไม่สำเร็จ', 'error'); }
+      }));
     };
-    try { render(await scope.request(path, { private: true, cacheTtlMs: 10_000, cacheKey: `rider-jobs:${ctx.rider.id}` })); } catch (err) { if (err.code !== M.network.STALE_RESPONSE) $('#list').innerHTML = M.ui.error('โหลดงานไม่สำเร็จ', err.message); return; }
-    const stop = M.network.startBackgroundSync({ key: `rider-jobs:${ctx.rider.id}`, intervalMs: 15_000, task: async () => { const rows = await M.request(path, { private: true, forceFresh: true, cacheKey: `rider-jobs:${ctx.rider.id}` }); const signature = JSON.stringify((rows || []).map(row => [row.id, row.status, row.ordered_at])); return { changed: signature !== lastSignature, data: rows }; }, onData: render, onError: error => M.ui.setNotice(`อัปเดตงานจัดส่งไม่สำเร็จ: ${error.message}`, 'error') }); addEventListener('pagehide', stop, { once: true });
+    try { render(await read(false)); } catch (err) { if (err.code !== M.network.STALE_RESPONSE) $('#list').innerHTML = M.ui.error('โหลดงานไม่สำเร็จ', err.message); return; }
+    const stop = M.network.startBackgroundSync({ key: `rider-jobs:${ctx.rider.id}`, intervalMs: 15_000, task: async () => { const data = await read(true); const signature = JSON.stringify({ assigned: data.assigned.map(row => [row.id, row.status, row.ordered_at]), available: data.available.map(row => [row.id, row.status, row.ordered_at]) }); return { changed: signature !== lastSignature, data }; }, onData: render, onError: error => M.ui.setNotice(`อัปเดตงานจัดส่งไม่สำเร็จ: ${error.message}`, 'error') }); addEventListener('pagehide', stop, { once: true });
   }
 
   async function delivery() {
