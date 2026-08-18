@@ -1,0 +1,681 @@
+<html lang="th">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <meta name="theme-color" content="#102b49" />
+  <title>AP Rider Console & Delivery Workspace</title>
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" crossorigin="" />
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" crossorigin=""></script>
+  <style>
+    :root{--navy:#102b49;--navy-2:#193b60;--sky:#3e90c8;--sky-soft:#eaf6ff;--ink:#17212b;--muted:#6c7a87;--line:#dce7ef;--paper:#fff;--canvas:#f2f7fa;--ok:#16805b;--warn:#b77615;--danger:#c04d5a;--shadow:0 16px 38px rgba(16,43,73,.10)}
+    *{box-sizing:border-box}body{margin:0;background:var(--canvas);color:var(--ink);font-family:Inter,"Noto Sans Thai",system-ui,-apple-system,"Segoe UI",sans-serif}button,input,select,textarea{font:inherit}button{border:0;cursor:pointer}.hidden{display:none!important}
+    .top{position:sticky;top:0;z-index:10;min-height:72px;padding:12px max(18px,calc((100vw - 1150px)/2));background:rgba(255,255,255,.93);backdrop-filter:blur(18px);border-bottom:1px solid var(--line);display:flex;align-items:center;justify-content:space-between;gap:14px}.brand{display:flex;align-items:center;gap:10px}.mark{width:42px;height:42px;border-radius:14px;display:grid;place-items:center;color:#fff;background:linear-gradient(135deg,#173b61,#3e90c8);font-size:20px;box-shadow:0 9px 18px rgba(25,59,96,.22)}.brand b{display:block;font-size:15px}.brand small{display:block;margin-top:2px;color:var(--muted);font-size:10px}.top-actions{display:flex;gap:8px;align-items:center}.shell{max-width:1150px;margin:auto;padding:24px 18px 56px}.rider-nav{display:flex;gap:8px;overflow:auto;padding:12px 0 3px;scrollbar-width:none}.rider-nav::-webkit-scrollbar{display:none}.rider-nav button{flex:0 0 auto;border:1px solid var(--line);background:#fff;color:var(--muted);border-radius:12px;padding:10px 13px;font-size:11px;font-weight:900}.rider-nav button.active{background:var(--navy);border-color:var(--navy);color:#fff;box-shadow:0 8px 16px rgba(16,43,73,.16)}.rider-page{display:none}.rider-page.active{display:block}.console-back{display:none;align-items:center;gap:7px;margin:10px 0 3px;padding:8px 12px;border:1px solid #b9d9ee;border-radius:12px;background:linear-gradient(135deg,#fff,#eaf6ff);color:var(--navy);font-size:10px;font-weight:950;box-shadow:0 7px 16px rgba(16,43,73,.08)}.console-back.show{display:inline-flex}.console-back:before{content:'‹';width:21px;height:21px;display:grid;place-items:center;border-radius:8px;background:var(--sky);color:#fff;font-size:19px;line-height:1}.console-back:active{transform:scale(.98)}
+    .hero{padding:29px;border-radius:25px;background:radial-gradient(circle at 85% 15%,rgba(94,189,255,.34),transparent 23%),linear-gradient(128deg,#102b49,#1d5f93);color:#fff;box-shadow:var(--shadow);display:flex;align-items:center;justify-content:space-between;gap:20px}.hero h1{font-size:clamp(27px,4vw,42px);letter-spacing:-1.4px;margin:7px 0}.hero p{margin:0;max-width:580px;color:#d9efff;font-size:12px;line-height:1.65}.hero-art{font-size:76px;filter:drop-shadow(0 14px 18px rgba(0,0,0,.19))}.eyebrow{font-size:10px;font-weight:900;letter-spacing:.14em;color:#bce5ff}
+    .card{background:var(--paper);border:1px solid var(--line);border-radius:20px;padding:19px;box-shadow:0 6px 16px rgba(35,77,111,.035)}.grid{display:grid;grid-template-columns:1.1fr .9fr;gap:16px;margin-top:18px}.stats{display:grid;grid-template-columns:repeat(3,1fr);gap:11px;margin-top:18px}.stat{background:#fff;border:1px solid var(--line);border-radius:16px;padding:14px}.stat small{color:var(--muted);font-size:10px}.stat b{font-size:24px;display:block;margin:7px 0 1px}
+    .section-head{display:flex;justify-content:space-between;align-items:flex-end;gap:12px;margin:23px 0 12px}.section-head h2{font-size:18px;margin:0}.section-head p{font-size:11px;margin:4px 0 0;color:var(--muted)}
+    .btn{display:inline-flex;align-items:center;justify-content:center;gap:7px;border-radius:11px;padding:10px 12px;font-size:11px;font-weight:900;transition:.16s}.btn:active{transform:scale(.97)}.btn-main{background:var(--navy);color:#fff}.btn-sky{background:var(--sky);color:#fff}.btn-plain{background:#fff;border:1px solid var(--line);color:var(--ink)}.btn-danger{background:var(--danger);color:#fff}.btn-sm{padding:7px 9px;border-radius:9px;font-size:10px}
+    .field{display:grid;gap:6px}.field label{font-size:10px;font-weight:850;color:var(--muted)}.field input,.field select,.field textarea{border:1px solid var(--line);border-radius:11px;padding:11px 12px;background:#fff;color:var(--ink)}
+    .form{display:grid;grid-template-columns:1fr auto;gap:9px;align-items:end}
+    .status{display:inline-flex;align-items:center;padding:5px 8px;border-radius:999px;background:#e6f7ef;color:var(--ok);font-size:9px;font-weight:900;white-space:nowrap}.status.wait{background:#fff4df;color:var(--warn)}.status.done{background:#e9eef2;color:#566a79}
+    .job{border:1px solid var(--line);background:#fff;border-radius:17px;padding:15px;margin-bottom:11px}.job-top{display:flex;align-items:flex-start;justify-content:space-between;gap:9px}.job b{font-size:12px}.job small{display:block;margin-top:4px;color:var(--muted);font-size:10px}
+    .route{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin:12px 0}.point{padding:10px;border-radius:12px;background:#f4f9fc;font-size:10px;line-height:1.5}.point strong{display:block;color:var(--navy);font-size:10px}
+    .map{display:inline-flex;text-decoration:none;align-items:center;justify-content:center;padding:7px 8px;margin-top:7px;border-radius:8px;background:#fff;border:1px solid var(--line);color:var(--navy);font-size:9px;font-weight:900}.map.off{color:var(--muted);pointer-events:none}
+    .job-actions{display:flex;gap:7px;flex-wrap:wrap;margin-top:12px}.notice{border-radius:13px;padding:12px;background:#fff8e5;color:#805f1a;font-size:10px;line-height:1.6}
+    .location{border-radius:14px;padding:13px;background:var(--sky-soft);border:1px solid #c9e7f9;font-size:10px;line-height:1.55;color:#285877}.location strong{display:block;color:var(--navy);font-size:11px}.location-actions{margin-top:9px;display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+    .empty{padding:24px;text-align:center;color:var(--muted);font-size:11px;border:1px dashed #c9dbe6;border-radius:14px}
+    .login{max-width:510px;margin:74px auto}.login .card{padding:27px}.login h1{font-size:25px;margin:13px 0 7px}.login p{margin:0 0 18px;color:var(--muted);font-size:11px;line-height:1.6}
+    .modal-overlay{position:fixed;inset:0;background:rgba(16,43,73,.56);backdrop-filter:blur(5px);z-index:50;display:grid;place-items:center;padding:16px;opacity:0;pointer-events:none;transition:.2s}
+    .modal-overlay.open{opacity:1;pointer-events:auto}
+    .modal{background:#fff;border-radius:22px;max-width:620px;width:100%;max-height:90vh;overflow:auto;padding:24px;box-shadow:0 24px 48px rgba(0,0,0,.22)}
+    .toast{position:fixed;z-index:100;right:max(16px,env(safe-area-inset-right));bottom:max(20px,env(safe-area-inset-bottom));display:grid;grid-template-columns:26px minmax(0,1fr);gap:9px;align-items:start;width:min(460px,calc(100vw - 32px));background:linear-gradient(135deg,#137a59,#2a9d74);border:2px solid rgba(255,255,255,.9);box-shadow:0 17px 34px rgba(16,43,73,.30),0 0 0 4px rgba(42,157,116,.14);color:#fff;padding:15px 17px;border-radius:16px;font-size:13px;font-weight:900;line-height:1.5;white-space:pre-line;opacity:0;transform:translateY(16px);pointer-events:none;transition:.22s}.toast:before{content:'✓';width:26px;height:26px;display:grid;place-items:center;border:1px solid rgba(255,255,255,.55);border-radius:50%;background:rgba(255,255,255,.22);font-size:15px}.toast.show{opacity:1;transform:none}.toast.is-warning{background:linear-gradient(135deg,#b06a12,#dc962d);box-shadow:0 17px 34px rgba(111,70,10,.26),0 0 0 4px rgba(220,150,45,.14)}.toast.is-warning:before{content:'!'}.toast.is-error{background:linear-gradient(135deg,#a63c47,#ca5860);box-shadow:0 17px 34px rgba(117,32,38,.26),0 0 0 4px rgba(202,88,96,.14)}.toast.is-error:before{content:'×';font-size:19px}
+    @media(max-width:760px){.hero{padding:23px}.hero-art{display:none}.grid{grid-template-columns:1fr}.stats{grid-template-columns:1fr 1fr}.form{grid-template-columns:1fr}.route{grid-template-columns:1fr}.top{padding:10px 15px}.shell{padding:18px 15px 45px}}
+  </style>
+</head>
+<body>
+  <header class="top">
+    <div class="brand"><div class="mark">🛵</div><div><b>AP Rider</b><small>Delivery Operations Console</small></div></div>
+    <div class="top-actions"><span class="status" id="riderStatusBadge">ยังไม่ได้เข้าสู่ระบบ</span><button class="btn btn-plain btn-sm hidden" id="logoutBtn">ออกจากระบบ</button></div>
+  </header>
+  <main class="shell">
+    <section id="loginView" class="login">
+      <div class="card">
+        <div class="mark">🛵</div>
+        <h1>เข้าสู่ระบบไรเดอร์</h1>
+        <p>เข้าสู่ระบบด้วยอีเมล หรือ Login ID ที่ผู้ดูแลออกให้ พร้อมรหัสผ่านของคุณ ระบบจะยืนยันสิทธิ์ก่อนแสดงงาน</p>
+        <div class="field"><label>อีเมล หรือ Login ID</label><input id="riderIdentifier" autocomplete="username" autocapitalize="none" placeholder="เช่น rider.somchai หรือ rider@apservice.com" /></div>
+        <div class="field" style="margin-top:12px"><label>รหัสผ่าน</label><input id="riderPassword" type="password" autocomplete="current-password" placeholder="รหัสผ่านของคุณ" /></div>
+        <button class="btn btn-main" style="width:100%;margin-top:14px" id="loginBtn">เข้าสู่ Rider Console</button>
+        <div class="notice" style="margin-top:14px">บัญชีต้องถูกสร้างและผูกกับโปรไฟล์ไรเดอร์โดยผู้ดูแลก่อนใช้งาน</div>
+      </div>
+    </section>
+
+    <section id="dashboardView" class="hidden">
+      <section class="hero">
+        <div><div class="eyebrow">RIDER WORKSPACE</div><h1 id="welcome">พร้อมรับงาน</h1><p>จัดการงาน จัดเส้นทาง ตรวจสอบตำแหน่ง GPS และบันทึกส่งสำเร็จพร้อมรับชำระเงินตามขั้นตอนมาตรฐาน</p></div>
+        <div class="hero-art">🛵</div>
+      </section>
+      <nav class="rider-nav" aria-label="เมนู Rider"><button class="active" data-rider-page="home">ภาพรวม</button><button data-rider-page="jobs">งานรับส่ง</button><button data-rider-page="profile">โปรไฟล์และสถานะ</button><button data-rider-page="earnings">รายได้</button><button data-rider-page="settings">ตั้งค่า</button></nav><button id="riderBackButton" type="button" class="console-back">กลับหน้าก่อนหน้า</button>
+      <section class="rider-page active" id="riderPage-home">
+      <div class="stats">
+        <div class="stat"><small>งานใหม่รอรับ</small><b id="newCount">0</b><small>ทุกประเภทงาน</small></div>
+        <div class="stat"><small>งานของฉัน</small><b id="myCount">0</b><small>กำลังดำเนินการ</small></div>
+        <div class="stat"><small>งานสำเร็จวันนี้</small><b id="doneCount">0</b><small>ยืนยันจากบัญชีรายได้</small></div>
+      </div>
+      </section>
+
+      <section class="rider-page" id="riderPage-profile">
+      <div class="section-head"><div><h2>โปรไฟล์และสถานะการทำงาน</h2><p>อัปเดตพิกัดและสถานะพร้อมรับงานจากหน้านี้</p></div></div>
+      <div class="grid">
+        <div class="card">
+          <h3 style="margin:0;font-size:16px">ตำแหน่งไรเดอร์</h3>
+          <p style="margin:5px 0 13px;color:var(--muted);font-size:11px">อัปเดตพิกัดเพื่อให้ศูนย์กลางและระบบตรวจสอบระยะจัดส่งเห็นตำแหน่งล่าสุดของคุณ</p>
+          <div class="location">
+            <strong>พิกัดล่าสุด</strong>
+            <span id="riderLocationText">ยังไม่ได้ส่งพิกัด</span>
+            <div class="location-actions">
+              <button class="btn btn-sky btn-sm" id="locationBtn">📍 ส่งพิกัดปัจจุบัน</button>
+              <a id="riderMap" class="map off" target="_blank" rel="noopener">เปิดตำแหน่งใน Google Maps</a>
+            </div>
+          </div>
+        </div>
+        <div class="card">
+          <h3 style="margin:0;font-size:16px">สถานะการทำงาน</h3>
+          <p style="margin:5px 0 13px;color:var(--muted);font-size:11px">ควบคุมสถานะพร้อมรับงานหรือพักการรับงานชั่วคราว</p>
+          <div class="form">
+            <div class="field"><label>สถานะปัจจุบัน</label><select id="availability"><option value="พร้อมรับงาน">พร้อมรับงาน</option><option value="ออฟไลน์">ออฟไลน์</option></select></div>
+            <button class="btn btn-main" id="saveAvailability">บันทึก</button>
+          </div>
+        </div>
+      </div>
+      </section>
+
+      <section class="rider-page" id="riderPage-settings">
+      <div class="section-head"><div><h2>การตั้งค่า Rider</h2><p>จัดการข้อมูลการใช้งานและดึงข้อมูลล่าสุดจากฐานข้อมูลกลาง</p></div></div>
+      <div class="card"><h3 style="margin:0 0 7px;font-size:16px">การเชื่อมต่อและความปลอดภัย</h3><p style="margin:0 0 14px;color:var(--muted);font-size:11px;line-height:1.6">ระบบจะรีเฟรชงาน สถานะ และ QR รับชำระเงินอัตโนมัติเมื่อเปิดหน้าจอ คุณสามารถกดรีเฟรชเองได้เมื่อสัญญาณอินเทอร์เน็ตกลับมา</p><button class="btn btn-main" type="button" onclick="refreshRiderWorkspace()">รีเฟรชข้อมูลจากฐานกลาง</button><details style="margin-top:14px"><summary style="cursor:pointer;font-size:11px;color:var(--muted);font-weight:900">ความช่วยเหลือและการแจ้งปัญหา</summary><p style="font-size:10px;color:var(--muted);line-height:1.55">ใช้เมื่อพบปัญหาจริง แบบฟอร์มปิดได้ด้วยปุ่มยกเลิก แตะฉากหลัง หรือกด Escape</p><button class="btn btn-plain btn-sm" type="button" onclick="openRiderErrorReport()">แจ้งปัญหาการใช้งาน</button></details></div>
+      </section>
+
+      <section class="rider-page" id="riderPage-jobs">
+      <div class="section-head"><div><h2>งานใหม่ที่รอรับทุกประเภท</h2><p>แสดงงานอาหาร พัสดุ และฝากซื้อที่ยังไม่ได้มอบหมายไรเดอร์</p></div><button class="btn btn-plain btn-sm" id="refreshBtn">รีเฟรชข้อมูล</button></div>
+      <div id="availableJobs"></div>
+
+      <div class="section-head"><div><h2>งานของฉัน (กำลังดำเนินการ)</h2><p>กดอัปเดตสถานะตามขั้นตอน (กำลังไปรับร้าน → ยืนยันถึงร้านค้า → ยืนยันรับสินค้าแล้ว → ไปจุดส่ง)</p></div></div>
+      <div id="myJobs"></div>
+      </section>
+
+      <section class="rider-page" id="riderPage-earnings">
+      <div class="section-head"><div><h2>รายได้และกระเป๋า Rider</h2><p>สรุปยอดรายได้สุทธิจากค่าส่งและประวัติงานที่ส่งสำเร็จ</p></div></div>
+      <div class="stats">
+        <div class="stat"><small>รายได้สุทธิวันนี้</small><b id="todayRiderIncome">฿0</b><small>ยอดสะสมจากค่าส่งวันนี้</small></div>
+        <div class="stat"><small>ยอดคงเหลือในระบบ</small><b id="walletBalance">฿0</b><small>ยอดที่ยังไม่ได้รับเงินจริง</small></div>
+        <div class="stat"><small>COD วันนี้</small><b id="todayCod">฿0</b><small>เงินสดที่เก็บจากลูกค้า</small></div>
+      </div>
+      <div id="riderWalletSummary" style="margin-top:12px"></div>
+      <div id="riderPayoutList" style="margin-top:12px"></div>
+      <div id="earningHistory" style="margin-top:12px"></div>
+      </section>
+    </section>
+  </main>
+
+  <!-- ORDER DETAIL & DELIVERY COMPLETION MODAL & WORKFLOW -->
+  <div class="modal-overlay" id="orderModal" aria-hidden="true">
+    <div class="modal">
+      <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:12px;margin-bottom:14px">
+        <div>
+          <h2 id="modalOrderId" style="margin:0;font-size:18px">จัดการออร์เดอร์</h2>
+          <p id="modalOrderSubtitle" style="margin:3px 0 0;color:var(--muted);font-size:11px">รายละเอียดการรับ–ส่งและการชำระเงิน</p>
+        </div>
+        <button class="btn btn-plain btn-sm" onclick="closeOrderModal()">ปิดหน้าต่าง</button>
+      </div>
+      <div id="modalOrderBody" style="display:grid;gap:14px"></div>
+    </div>
+  </div>
+
+  <div id="toast" class="toast"></div>
+
+  <script src="./shared/ap-service-core.js?v=four-client-contract-v1"></script>
+  <script>
+    const $=s=>document.querySelector(s);const money=n=>'฿'+Number(n||0).toLocaleString('th-TH');const now=()=>new Date().toLocaleString('th-TH',{dateStyle:'short',timeStyle:'short'});const today=()=>new Date().toISOString().slice(0,10);const esc=v=>String(v||'').replace(/[&<>"']/g,c=>({'&':'&amp;','>':'&gt;','<':'&lt;','"':'&quot;'}[c]));
+    const read=(key,fallback)=>{try{return JSON.parse(localStorage.getItem(key)||'null')??fallback}catch{return fallback}};const write=(key,value)=>{const inline=item=>typeof item==='string'&&/^data:image\\//i.test(item.trim()),strip=(item,seen=new WeakSet())=>{if(inline(item))return '';if(!item||typeof item!=='object')return item;if(seen.has(item))return null;seen.add(item);if(Array.isArray(item))return item.map(child=>strip(child,seen));const copy={};Object.entries(item).forEach(([name,child])=>{copy[name]=strip(child,seen)});return copy};try{localStorage.setItem(key,JSON.stringify(value))}catch(error){const message=String(error?.message||error||'').toLowerCase();if(!String(error?.name||'').toLowerCase().includes('quota')&&!message.includes('quota')&&!message.includes('exceeded the quota')){console.warn('AP Rider storage skipped '+key,error);return false}try{localStorage.removeItem(key);localStorage.setItem(key,JSON.stringify(strip(value)));console.warn('AP Rider storage sanitized inline images for '+key)}catch(fallbackError){console.warn('AP Rider storage skipped '+key+' after quota fallback',fallbackError)}}return true};
+    const storedRiders=read('apcx_riders',[]);const State={riders:storedRiders.length?storedRiders:[{id:'rider-1',name:'ธนา พรหมมา',emoji:'🛵',phone:'081-555-1001',vehicle:'มอเตอร์ไซค์',status:'พร้อมรับงาน'}],orders:read('apcx_orders',[]),earnings:read('apcx_rider_earnings',[]),config:read('apcx_config',{payment:{promptPayId:''}}),session:read('apcx_rider_session',null),activeModalOrderId:null,isSyncing:false};
+    const legacyRiderCloudSession=read('apcx_supabase_session',null);if(!read('apcx_rider_supabase_session',null)&&legacyRiderCloudSession?.user?.id&&legacyRiderCloudSession.user.id===State.session?.userId){write('apcx_rider_supabase_session',legacyRiderCloudSession);localStorage.removeItem('apcx_supabase_session')}
+
+    const Cloud={
+      url:'https://abtsctwfkgzciseppach.supabase.co',
+      key:'sb_publishable_TyJWnKkbS8vKcQKKAzoqSg_BOguwKRv',
+      session:()=>read('apcx_rider_supabase_session',null),
+      setSession(session){write('apcx_rider_supabase_session',session)},
+      clearSession(){localStorage.removeItem('apcx_rider_supabase_session')},
+      headers(session=this.session()){const headers={apikey:this.key,'Content-Type':'application/json'};if(session?.access_token)headers.Authorization='Bearer '+session.access_token;return headers},
+      async refreshSession(){const current=this.session();if(!current?.refresh_token)throw new Error('เซสชันหมดอายุ กรุณาเข้าสู่ระบบใหม่');const response=await fetch(this.url+'/auth/v1/token?grant_type=refresh_token',{method:'POST',headers:{apikey:this.key,'Content-Type':'application/json'},body:JSON.stringify({refresh_token:current.refresh_token})});const data=await response.json().catch(()=>null);if(!response.ok||!data?.access_token){this.clearSession();throw new Error('เซสชันหมดอายุ กรุณาเข้าสู่ระบบใหม่')}this.setSession(data);return data},
+      async validSession(){let session=this.session();if(!session?.access_token)throw new Error('กรุณาเข้าสู่ระบบ Rider ใหม่');const expiresAt=Number(session.expires_at||0);if(expiresAt&&expiresAt<=Math.floor(Date.now()/1000)+60)session=await this.refreshSession();return session},
+      async request(path,options={}){let session=await this.validSession();const send=()=>fetch(this.url+'/rest/v1/'+path,{...options,headers:{...this.headers(session),...(options.headers||{})}});let response=await send();let text=await response.text();let data=null;try{data=text?JSON.parse(text):null}catch{data=text}if(response.status===401){session=await this.refreshSession();response=await send();text=await response.text();try{data=text?JSON.parse(text):null}catch{data=text}}if(!response.ok){if(response.status===403)throw new Error('บัญชีนี้ไม่มีสิทธิ์อัปเดตข้อมูลดังกล่าว กรุณาออกและเข้าสู่ระบบใหม่');throw new Error(data?.message||data?.error_description||data?.hint||'Supabase HTTP '+response.status)}return data},
+      async login(identifier,password){const response=await fetch(this.url+'/functions/v1/role-access',{method:'POST',headers:{apikey:this.key,'Content-Type':'application/json'},body:JSON.stringify({action:'login',role:'rider',identifier,password})});const data=await response.json();if(!response.ok)throw new Error(data?.error||'เข้าสู่ระบบไม่สำเร็จ');this.setSession(data.session);const rows=await this.request('riders?select=*&user_id=eq.'+encodeURIComponent(data.user.id)+'&limit=1');const remote=rows?.[0];if(!remote)throw new Error('ไม่พบโปรไฟล์ไรเดอร์ของบัญชีนี้');const rider={id:remote.id,name:remote.name,emoji:remote.emoji||'🛵',phone:remote.phone||'',vehicle:remote.vehicle||'มอเตอร์ไซค์',status:remote.status||'พร้อมรับงาน',lastLocation:remote.last_location||null};State.riders=[rider];State.session={riderId:rider.id,userId:data.user.id,loginAt:new Date().toISOString()};write('apcx_riders',State.riders);write('apcx_rider_session',State.session);return rider},
+      async pullOrders(){
+        if(State.isSyncing)return;
+        const rows=await this.request('delivery_orders?select=*&order=ordered_at.desc&limit=100');
+        if(!Array.isArray(rows))return;
+        const visibleRows=rows.filter(row=>row.status!=='รอตรวจสอบการชำระเงิน'&&row.status!=='ต้องแนบสลิปใหม่');
+        const orderIds=visibleRows.map(row=>row.id).filter(Boolean);
+        const itemRows=orderIds.length?await this.request('delivery_order_items?select=*&order_id=in.('+orderIds.map(id=>encodeURIComponent(id)).join(',')+')&limit=1000').catch(error=>{console.warn('Cloud rider order items pull failed',error);return []}):[];
+        const itemsByOrder=(Array.isArray(itemRows)?itemRows:[]).reduce((result,item)=>{
+          (result[item.order_id]||(result[item.order_id]=[])).push({id:item.id,itemId:item.item_id,name:item.name,emoji:item.emoji,unitPrice:Number(item.unit_price||0),quantity:Number(item.quantity||0),options:item.options||{}});
+          return result;
+        },{});
+        State.orders=visibleRows.map(row=>({
+          id:row.id,storeId:row.store_id,storeName:row.store_name,serviceType:row.service_type||'food',riderId:row.rider_id,riderName:row.rider_name,name:row.customer_name,customerEmail:row.customer_email,
+          total:Number(row.total||0),payable:Number(row.payable||0),deliveryFee:Number(row.delivery_fee||0),status:row.status,time:row.ordered_at,orderedAt:row.ordered_at,
+          pickupAddress:row.pickup_address,pickupLocation:row.pickup_location,deliveryAddress:row.delivery_address,deliveryLocation:row.delivery_location,
+          acceptedAt:row.accepted_at,arrivedAtStore:row.arrived_at_store,itemsCollected:row.items_collected,deliveryStartedAt:row.delivery_started_at,completedAt:row.completed_at,
+          note:row.note||'',paymentMethod:row.payment_method||'เงินสดปลายทาง (COD)',paymentReceived:Number(row.payment_received||0),paymentChange:Number(row.payment_change||0),paymentConfirmedAt:row.payment_confirmed_at||null,proofImage:row.proof_image||null,rideSelectedRiderId:row.ride_selected_rider_id||null,ridePassengerCount:Number(row.ride_passenger_count||1),rideArrivedAt:row.ride_arrived_at||null,rideArrivedLocation:row.ride_arrived_location||null,rideDestinationSetAt:row.ride_destination_set_at||null,items:itemsByOrder[row.id]||[]
+        }));
+        write('apcx_orders',State.orders);
+      },
+      async pullEarnings(riderId){
+        const rows=await this.request('rider_earnings?select=order_id,rider_id,delivery_fee,rider_share,platform_share,settlement_status,completed_at,delivery_orders(id,store_name,customer_name,service_type,payable,delivery_fee)&rider_id=eq.'+encodeURIComponent(riderId)+'&order=completed_at.desc&limit=100');
+        if(!Array.isArray(rows))return;
+        State.earnings=rows.map(row=>({
+          orderId:row.order_id,riderId:row.rider_id,deliveryFee:Number(row.delivery_fee||row.delivery_orders?.delivery_fee||0),riderShare:Number(row.rider_share||0),platformShare:Number(row.platform_share||0),settlementStatus:row.settlement_status,completedAt:row.completed_at,order:row.delivery_orders
+        }));
+        write('apcx_rider_earnings',State.earnings);
+      },
+      async saveOrder(order){
+        const payload={
+          status:order.status,rider_id:order.riderId,rider_name:order.riderName,
+          accepted_at:order.acceptedAt||null,arrived_at_store:order.arrivedAtStore||null,items_collected:order.itemsCollected||null,
+          delivery_started_at:order.deliveryStartedAt||null,completed_at:order.completedAt||null,
+          payment_method:order.paymentMethod||'เงินสดปลายทาง (COD)',payment_received:Number(order.paymentReceived||0),payment_change:Number(order.paymentChange||0),payment_confirmed_at:order.paymentConfirmedAt||null,proof_image:order.proofImage||null,updated_at:new Date().toISOString()
+        };
+        await this.request('delivery_orders?id=eq.'+encodeURIComponent(order.id),{method:'PATCH',headers:{Prefer:'return=minimal'},body:JSON.stringify(payload)});
+      },
+      async saveRider(rider){await this.request('riders?id=eq.'+encodeURIComponent(rider.id),{method:'PATCH',headers:{Prefer:'return=minimal'},body:JSON.stringify({status:rider.status,last_location:rider.lastLocation,updated_at:new Date().toISOString()})})},
+      async syncConfig(){try{const rows=await this.request('platform_configs?select=key,value');if(Array.isArray(rows)){const payment=rows.find(r=>r.key==='payment_public')?.value;if(payment){State.config.payment={...(State.config.payment||{}),provider:payment.provider||'manual',promptPayId:payment.promptPayId||'',qrImageUrl:payment.qrImageUrl||'',cod:Boolean(payment.cod)};write('apcx_config',State.config)}}}catch(e){}}
+    };
+
+    let toastTimer=null;const toast=(text,tone='')=>{const e=$('#toast'),message=String(text||'').trim()||'ดำเนินการเรียบร้อยแล้ว',lower=message.toLowerCase(),resolved=tone||(/ไม่สำเร็จ|ไม่สามารถ|ขัดข้อง|ผิดพลาด|ถูกปฏิเสธ|ล้มเหลว|หมดอายุ/.test(lower)?'error':/กรุณา|คำเตือน|ยังไม่ได้|ไม่พบ|รออนุมัติ/.test(lower)?'warning':'success');e.textContent=message;e.className=`toast show is-${resolved}`;if(toastTimer)clearTimeout(toastTimer);toastTimer=setTimeout(()=>e.classList.remove('show'),5000)};
+    const mapUrl=location=>location?.lat!==undefined&&location?.lng!==undefined?`https://www.google.com/maps/dir/?api=1&destination=${encodeURIComponent(location.lat+','+location.lng)}`:'';
+    const mapButton=(location,text)=>{const url=mapUrl(location);return url?`<a class="map" target="_blank" rel="noopener" href="${url}">${text}</a>`:`<span class="map off">ยังไม่มีพิกัด</span>`};
+    const optionSummary=item=>{
+      const selections=Array.isArray(item?.options?.selections)?item.options.selections:[];
+      return selections.map(selection=>`${selection.groupName||'ตัวเลือก'}: ${selection.valueName||'-'}${Number(selection.priceDelta||0)?` (+${money(selection.priceDelta)})`:''}`).join(' · ');
+    };
+    const orderItemsHtml=items=>!items?.length?'<div style="font-size:11px;color:var(--muted);padding:6px 0">ไม่มีรายละเอียดรายการสินค้าในออร์เดอร์นี้</div>':items.map(item=>`<div style="padding:9px 0;border-bottom:1px dashed var(--line)"><div style="display:flex;justify-content:space-between;gap:10px"><b style="font-size:12px">${esc(item.emoji||'🍽️')} ${esc(item.name||'รายการสินค้า')} × ${Number(item.quantity||0)}</b><span style="font-size:12px;font-weight:900">${money(Number(item.unitPrice||0)*Number(item.quantity||0))}</span></div>${optionSummary(item)?`<div style="font-size:11px;color:var(--muted);padding:3px 0 0 22px">ปรับแต่ง: ${esc(optionSummary(item))}</div>`:''}</div>`).join('');
+    const sync=()=>{State.riders=read('apcx_riders',[]);State.orders=read('apcx_orders',[]);State.earnings=read('apcx_rider_earnings',[])};const persist=()=>{write('apcx_riders',State.riders);write('apcx_orders',State.orders);write('apcx_rider_earnings',State.earnings)};
+    function currentRider(){return State.riders.find(r=>r.id===State.session?.riderId)}
+
+    function syncSessionUI(){
+      const rider=currentRider();const active=Boolean(rider);
+      $('#loginView').classList.toggle('hidden',active);$('#dashboardView').classList.toggle('hidden',!active);$('#logoutBtn').classList.toggle('hidden',!active);
+      $('#riderStatusBadge').textContent=active?rider.status:'ยังไม่ได้เข้าสู่ระบบ';$('#riderStatusBadge').classList.toggle('wait',active&&rider.status!=='พร้อมรับงาน');
+      if(!active)return;
+      $('#welcome').textContent=`สวัสดี ${rider.name}`;$('#availability').value=rider.status==='กำลังส่งงาน'?'พร้อมรับงาน':rider.status;
+      const location=rider.lastLocation;
+      $('#riderLocationText').textContent=location?`พิกัด ${Number(location.lat).toFixed(6)}, ${Number(location.lng).toFixed(6)} · ${location.capturedAt}`:'ยังไม่ได้ส่งพิกัด (แนะนำเปิดสิทธิ์ Location ในมือถือ)';
+      const link=$('#riderMap'),url=mapUrl(location);link.href=url||'';link.classList.toggle('off',!url);link.textContent=url?'เปิดตำแหน่งใน Google Maps':'ยังไม่มีพิกัดสำหรับเปิดแผนที่';
+    }
+
+    const RiderFormDraftUX={key:'apcx_rider_form_drafts_v1',read(){try{return JSON.parse(sessionStorage.getItem(this.key)||'{}')}catch{return{}}},save(){const value={};document.querySelectorAll('input,textarea,select').forEach(field=>{if(!field.id||field.type==='password'||field.type==='file')return;value[field.id]=field.type==='checkbox'?field.checked:field.value});try{sessionStorage.setItem(this.key,JSON.stringify(value))}catch{}},restore(){const value=this.read();Object.entries(value).forEach(([id,saved])=>{const field=$('#'+id);if(!field||field.type==='password'||field.type==='file')return;field.type==='checkbox'?field.checked=!!saved:field.value=saved})},init(){this.restore();document.addEventListener('input',()=>this.save(),true);document.addEventListener('change',()=>this.save(),true)}};
+    const RiderNavigationUX={stack:[],remember(page){if(!page||page==='home'||this.stack.at(-1)===page)return;this.stack.push(page);this.stack=this.stack.slice(-10)},render(page){const button=$('#riderBackButton');if(button)button.classList.toggle('show',page!=='home')},back(){showRiderPage(this.stack.pop()||'home',{back:true})},init(){RiderFormDraftUX.init();$('#riderBackButton')?.addEventListener('click',()=>this.back());window.addEventListener('popstate',event=>showRiderPage(event.state?.apConsole==='rider'?event.state.page||'home':'home',{back:true}))}};
+    function showRiderPage(page='home',options={}){const previous=State.page||'home';if(!options.back&&previous!==page&&page!=='home'){RiderNavigationUX.remember(previous);window.history.pushState({apConsole:'rider',page},'',window.location.href)}RiderFormDraftUX.save();State.page=page;document.querySelectorAll('[data-rider-page]').forEach(button=>button.classList.toggle('active',button.dataset.riderPage===page));document.querySelectorAll('.rider-page').forEach(section=>section.classList.toggle('active',section.id===`riderPage-${page}`));RiderNavigationUX.render(page);window.scrollTo({top:0,behavior:'smooth'});}
+    document.querySelectorAll('[data-rider-page]').forEach(button=>button.addEventListener('click',()=>showRiderPage(button.dataset.riderPage)));RiderNavigationUX.init();
+    window.refreshRiderWorkspace=()=>refreshFromCloud(false);
+    function statusHistory(order,status){order.status=status;order.statusHistory=order.statusHistory||[];order.statusHistory.push({status,time:now(),by:`ไรเดอร์: ${currentRider()?.name||'ไม่ระบุ'}`})}
+
+    function jobCard(order,mode){
+      const pickup=order.pickupAddress||order.storeName||'ยังไม่ระบุจุดรับ';
+      const delivery=order.deliveryAddress||order.address||'ยังไม่ระบุจุดส่ง';
+      const assigned=mode==='mine';
+      const netDeliveryFee=Number(order.deliveryFee||0);
+      const riderShare=money(netDeliveryFee*.8);
+      
+      let progress='';
+      if(order.status==='ไรเดอร์กำลังไปรับ'||order.status==='กำลังดำเนินการ'||order.status==='ร้านค้ารับออร์เดอร์'){
+        progress=`<button class="btn btn-sky btn-sm" onclick="setStatusStep('${order.id}','ถึงร้านค้า')">📍 ยืนยันถึงร้านค้า</button>`;
+      }else if(order.status==='ถึงร้านค้า'){
+        progress=`<button class="btn btn-sky btn-sm" onclick="setStatusStep('${order.id}','รับสินค้าแล้ว')">📦 ยืนยันรับสินค้าครบ</button>`;
+      }else if(order.status==='รับสินค้าแล้ว'||order.status==='กำลังจัดส่ง'){
+        progress=`<button class="btn btn-main btn-sm" onclick="openOrderModal('${order.id}')">🏁 ไปจุดส่ง / ส่งสำเร็จ</button>`;
+      }
+
+      return `<article class="job">
+        <div class="job-top">
+          <div>
+            <b>${esc(order.id)} · ${esc(order.serviceType||'บริการจัดส่ง')}</b>
+            <small>${esc(order.storeName||'บริการจัดส่ง')} · ยอด COD ${money(order.payable||order.total)}</small>
+            <small style="color:var(--ok);font-weight:800">รายได้สุทธิที่จะได้รับ: ${riderShare}</small>
+            ${order.items?.length?`<small>รายการสำหรับตรวจรับ: ${order.items.length} รายการ${order.items.some(item=>optionSummary(item))?' · มีตัวเลือกเสริม':''}</small>`:''}
+            <small>ลูกค้า: ${esc(order.name||'ไม่ระบุ')} · ${esc(order.customerEmail||'')}</small>
+          </div>
+          <span class="status ${order.status==='สำเร็จแล้ว'?'done':order.status==='กำลังจัดส่ง'?'wait':''}">${esc(order.status)}</span>
+        </div>
+        <div class="route">
+          <div class="point"><strong>📍 จุดรับ</strong>${esc(pickup)}<br>${mapButton(order.pickupLocation,'เปิดจุดรับ')}</div>
+          <div class="point"><strong>🏁 จุดส่ง</strong>${esc(delivery)}<br>${mapButton(order.deliveryLocation,'เปิดจุดส่ง')}</div>
+        </div>
+        ${order.note?`<small>หมายเหตุ: ${esc(order.note)}</small>`:''}
+        <div class="job-actions">
+          ${assigned?`${progress}<button class="btn btn-plain btn-sm" onclick="openBothMaps('${order.id}')">เปิดเส้นทางทั้งหมด</button><button class="btn btn-plain btn-sm" onclick="openOrderModal('${order.id}')">รายละเอียดงาน</button>`:`<button class="btn btn-main btn-sm" onclick="acceptJob('${order.id}')">รับงานนี้</button>`}
+        </div>
+      </article>`;
+    }
+
+    function render(){
+      sync();const rider=currentRider();if(!rider){syncSessionUI();return}syncSessionUI();
+      const open=State.orders.filter(o=>!o.riderId&&!['สำเร็จแล้ว','ยกเลิก'].includes(o.status));
+      const mine=State.orders.filter(o=>o.riderId===rider.id&&!['สำเร็จแล้ว','ยกเลิก'].includes(o.status));
+      const settled=State.earnings.filter(e=>e.riderId===rider.id&&e.settlementStatus==='settled');
+      const day=new Date().toISOString().slice(0,10);
+      const todayIncome=settled.filter(e=>String(e.completedAt||'').slice(0,10)===day);
+      const todayCod=State.orders.filter(o=>o.riderId===rider.id&&o.status==='สำเร็จแล้ว'&&String(o.completedAt||'').slice(0,10)===day).reduce((sum,o)=>sum+Number(o.payable||o.total||0),0);
+      $('#newCount').textContent=open.length;$('#myCount').textContent=mine.length;$('#doneCount').textContent=todayIncome.length;
+      $('#todayRiderIncome').textContent=money(todayIncome.reduce((sum,e)=>sum+Number(e.riderShare||0),0));
+      $('#walletBalance').textContent=money(settled.reduce((sum,e)=>sum+Number(e.riderShare||0),0));
+      $('#todayCod').textContent=money(todayCod);
+      $('#availableJobs').innerHTML=open.length?open.map(o=>jobCard(o,'open')).join(''):'<div class="empty">ไม่มีงานใหม่ในขณะนี้</div>';
+      $('#myJobs').innerHTML=mine.length?mine.map(o=>jobCard(o,'mine')).join(''):'<div class="empty">คุณยังไม่มีงานที่กำลังดำเนินการ (งานที่ส่งสำเร็จจะย้ายไปที่ประวัติรายได้ด้านล่างทันที)</div>';
+      $('#earningHistory').innerHTML=settled.length?`<div class="card"><h3 style="margin:0 0 10px;font-size:15px">ประวัติงานที่ส่งสำเร็จแล้ว</h3>${settled.slice(0,12).map(e=>`<div class="job" style="margin-bottom:8px;padding:12px"><div class="job-top"><div><b>${esc(e.orderId)}</b><small>${esc(e.order?.store_name||'บริการจัดส่ง')} · ${esc(new Date(e.completedAt).toLocaleString('th-TH'))}</small></div><span class="status done">ได้รับ ${money(e.riderShare)}</span></div><small>ค่าส่งสุทธิ ${money(e.deliveryFee)} · รายได้สุทธิ ${money(e.riderShare)} (ส่งสำเร็จ)</small></div>`).join('')}</div>`:'<div class="empty">ยังไม่มีประวัติงานที่ส่งสำเร็จในระบบ</div>';
+    }
+
+    const RiderPayouts={
+      async load(riderId){if(!riderId)return;try{const rows=await Cloud.request('settlements?select=*&rider_id=eq.'+encodeURIComponent(riderId)+'&order=due_date.desc,created_at.desc&limit=120');State.payouts=Array.isArray(rows)?rows:[];write('apcx_rider_payouts',State.payouts)}catch(error){console.warn('ไม่สามารถโหลดรอบจ่าย Rider',error)}},
+      render(){const target=$('#riderPayoutList'),rows=State.payouts||[];if(!target)return;const pending=rows.filter(row=>row.status==='pending'),paid=rows.filter(row=>row.status==='paid'),pendingAmount=pending.reduce((sum,row)=>sum+Number(row.net_amount||0),0),paidAmount=paid.reduce((sum,row)=>sum+Number(row.net_amount||0),0);$('#walletBalance').textContent=money(pendingAmount);if(!rows.length){target.innerHTML='<div class="empty">ยังไม่มีรอบรับเงิน เมื่อมีงานสำเร็จ ผู้ดูแลจะสร้างรอบจ่ายตามข้อตกลง</div>';return}const items=rows.map(row=>{const proof=row.proof_image_url?'<a class="map" target="_blank" rel="noopener" href="'+esc(row.proof_image_url)+'">ดูหลักฐานการโอน</a>':'<small>ผู้ดูแลจะอัปโหลดหลักฐานเมื่อทำรายการโอนเสร็จ</small>';return '<div class="job" style="margin-bottom:8px;padding:12px"><div class="job-top"><div><b>'+money(row.net_amount)+'</b><small>รอบ '+esc(row.period_start)+' ถึง '+esc(row.period_end)+' · ครบกำหนด '+esc(row.due_date)+'</small></div><span class="status '+(row.status==='pending'?'wait':'done')+'">'+(row.status==='paid'?'โอนแล้ว':'รอโอน')+'</span></div>'+proof+'</div>'}).join('');target.innerHTML='<div class="card"><div class="section-head" style="margin:0 0 10px"><div><h3 style="margin:0;font-size:15px">รอบรับเงินจากผู้ดูแล</h3><p>ตรวจวันครบกำหนดและเปิดดูหลักฐานการโอนได้จากรายการนี้</p></div><span class="status '+(pending.length?'wait':'done')+'">'+(pending.length?'รอรับ '+money(pendingAmount):'รับเงินแล้ว '+money(paidAmount))+'</span></div>'+items+'</div>'}
+    };
+    const RiderWallet={
+      async load(riderId){if(!riderId)return;try{const [summary,requests]=await Promise.all([Cloud.request('rpc/wallet_summary',{method:'POST',body:JSON.stringify({p_recipient_type:'rider',p_recipient_id:riderId})}),Cloud.request('withdrawal_requests?select=*&rider_id=eq.'+encodeURIComponent(riderId)+'&order=requested_at.desc&limit=60')]);State.wallet=Array.isArray(summary)?summary[0]:summary||{};State.withdrawals=Array.isArray(requests)?requests:[];write('apcx_rider_wallet',State.wallet);write('apcx_rider_withdrawals',State.withdrawals)}catch(error){console.warn('ไม่สามารถโหลดกระเป๋า Rider',error)}},
+      render(){const target=$('#riderWalletSummary'),wallet=State.wallet||{},requests=State.withdrawals||[];if(!target)return;const available=Number(wallet.available_amount||0),processing=Number(wallet.processing_amount||0),paid=Number(wallet.paid_amount||0),total=Number(wallet.total_earned||0);$('#walletBalance').textContent=money(available+processing);target.innerHTML='<div class="card"><div class="section-head" style="margin:0 0 10px"><div><h3 style="margin:0;font-size:15px">กระเป๋าเงิน Rider</h3><p>ยอดสะสมจะคงอยู่ข้ามวันจนกว่าจะได้รับเงินจริงหรือส่งคำขอถอน</p></div><button class="btn btn-main btn-sm" type="button" onclick="requestRiderWithdrawal()" '+(available>0?'':'disabled')+'>ร้องขอถอนเงิน</button></div><div class="stats"><div class="stat"><small>รายได้สะสมทั้งหมด</small><b>'+money(total)+'</b><small>รวมงานที่ผ่านมา</small></div><div class="stat"><small>พร้อมถอน</small><b>'+money(available)+'</b><small>ยังไม่ผูกกับรอบจ่าย</small></div><div class="stat"><small>กำลังดำเนินการ</small><b>'+money(processing)+'</b><small>รอผู้ดูแลโอนหรืออนุมัติ</small></div><div class="stat"><small>รับเงินจริงแล้ว</small><b>'+money(paid)+'</b><small>ดูหลักฐานได้จากรายการด้านล่าง</small></div></div>' +(requests.length?'<div style="margin-top:12px">'+requests.slice(0,5).map(row=>'<div class="job" style="margin-bottom:8px;padding:12px"><div class="job-top"><div><b>คำขอถอน '+money(row.amount)+'</b><small>'+esc(new Date(row.requested_at).toLocaleString('th-TH'))+(row.admin_note?' · '+esc(row.admin_note):'')+'</small></div><span class="status '+(row.status==='paid'?'done':row.status==='rejected'?'':'wait')+'">'+({requested:'รอตรวจสอบ',approved:'อนุมัติแล้ว',paid:'โอนแล้ว',rejected:'ไม่อนุมัติ',cancelled:'ยกเลิก'}[row.status]||esc(row.status))+'</span></div>'+((row.status==='paid'&&row.proof_image_url)?'<a class="map" target="_blank" rel="noopener" href="'+esc(row.proof_image_url)+'">ดูหลักฐานการโอน</a>':'')+'</div>').join('')+'</div>':'<small style="display:block;margin-top:12px;color:var(--muted)">ยังไม่มีคำขอถอนเงิน คุณสามารถกดร้องขอเมื่อมียอดพร้อมถอน</small>')+'</div>'}
+    };
+    const riderPayoutBasePullEarnings=Cloud.pullEarnings.bind(Cloud);Cloud.pullEarnings=async riderId=>{await riderPayoutBasePullEarnings(riderId);await RiderPayouts.load(riderId);await RiderWallet.load(riderId)};
+    const riderPayoutBaseRender=render;render=()=>{riderPayoutBaseRender();RiderPayouts.render();RiderWallet.render()};
+    window.refreshRiderPayouts=async()=>{const rider=currentRider();if(!rider)return;await RiderPayouts.load(rider.id);render();toast('รีเฟรชสถานะรอบรับเงินแล้ว')};
+    window.requestRiderWithdrawal=async()=>{const rider=currentRider(),wallet=State.wallet||{};if(!rider)return;const available=Number(wallet.available_amount||0);if(available<=0)return toast('ยังไม่มียอดพร้อมถอนในขณะนี้');const note=prompt('ระบุหมายเหตุถึงผู้ดูแล (ไม่บังคับ)')||'';if(!confirm('ยืนยันร้องขอถอนเงิน '+money(available)+'?\nยอดจะถูกกันไว้ระหว่างรอผู้ดูแลตรวจสอบ'))return;try{await Cloud.request('rpc/request_full_wallet_withdrawal',{method:'POST',body:JSON.stringify({p_recipient_type:'rider',p_recipient_id:rider.id,p_recipient_note:note})});await RiderWallet.load(rider.id);render();toast('ส่งคำขอถอนเงินให้ผู้ดูแลตรวจสอบแล้ว')}catch(error){toast('ส่งคำขอถอนเงินไม่สำเร็จ: '+error.message)}};
+    window.acceptJob=async id=>{
+      sync();const rider=currentRider(),order=State.orders.find(o=>o.id===id);
+      if(!rider||!order||order.riderId)return toast('งานนี้ถูกมอบหมายแล้ว');
+      const acceptance=window.APServiceCore?.order?.canTransition({from:order.status,to:'ไรเดอร์กำลังไปรับ',actor:'rider'});
+      if(!acceptance?.ok)return toast(acceptance?.reason||'งานนี้ยังไม่พร้อมให้ Rider รับ');
+      if(!confirm(`ยืนยันรับงาน ${order.id}\nร้าน: ${order.storeName||'-'}\nยอด: ${money(order.payable||order.total)}\n\nเมื่อยืนยัน งานนี้จะถูกมอบหมายให้คุณ`))return;
+      try{
+        State.isSyncing=true;
+        const claimed=await Cloud.request('delivery_orders?id=eq.'+encodeURIComponent(order.id)+'&rider_id=is.null',{method:'PATCH',headers:{Prefer:'return=representation'},body:JSON.stringify({rider_id:rider.id,rider_name:rider.name,status:'ไรเดอร์กำลังไปรับ',accepted_at:new Date().toISOString()})});
+        if(!Array.isArray(claimed)||!claimed.length)throw new Error('งานนี้ถูกไรเดอร์รายอื่นรับไปแล้ว');
+        order.riderId=rider.id;order.riderName=rider.name;order.acceptedAt=new Date().toISOString();rider.status='กำลังส่งงาน';
+        statusHistory(order,'ไรเดอร์กำลังไปรับ');persist();
+        await Cloud.request('order_status_events',{method:'POST',headers:{Prefer:'return=minimal'},body:JSON.stringify({order_id:order.id,status:'ไรเดอร์กำลังไปรับ',actor_id:State.session?.userId||null,actor_label:'ไรเดอร์: '+rider.name})});
+        await Cloud.pullOrders();await Cloud.pullEarnings(rider.id);render();if(window.ReactNativeWebView)window.ReactNativeWebView.postMessage(JSON.stringify({type:'ap-service-rider-job-accepted',orderId:order.id}));toast('รับงานและแจ้งศูนย์กลางว่ากำลังไปรับแล้ว');
+      }catch(error){console.warn('Cloud rider accept failed',error);toast(error.message||'รับงานไม่สำเร็จ โปรดลองรีเฟรชข้อมูล')}
+      finally{setTimeout(()=>State.isSyncing=false,1200)}
+    };
+
+    window.setStatusStep=async(id,stepStatus)=>{
+      sync();const rider=currentRider(),order=State.orders.find(o=>o.id===id&&o.riderId===rider?.id);
+      if(!order)return toast('ไม่พบงานของคุณ');
+      const decision=window.APServiceCore?.order?.canTransition({from:order.status,to:stepStatus,actor:'rider'});
+      if(!decision?.ok)return toast(decision?.reason||'ไม่สามารถเปลี่ยนสถานะนี้ได้');
+      if(!confirm(`ยืนยันอัปเดตสถานะเป็น “${stepStatus}”`))return;
+      if(stepStatus==='ถึงร้านค้า') order.arrivedAtStore=new Date().toISOString();
+      if(stepStatus==='รับสินค้าแล้ว') order.itemsCollected=new Date().toISOString();
+      statusHistory(order,stepStatus);persist();
+      render();toast(`อัปเดตสถานะเป็น “${stepStatus}” แล้ว`);
+      try{
+        State.isSyncing=true;
+        await Cloud.saveOrder(order);
+        await Cloud.pullOrders();
+        render();
+      }catch(err){console.warn('Step sync error',err);toast('บันทึกในเครื่องแล้ว แต่ซิงก์คลาวด์ขัดข้อง: '+(err.message||''))}
+      finally{setTimeout(()=>State.isSyncing=false,1200)}
+    };
+
+    window.openBothMaps=id=>{
+      const order=State.orders.find(o=>o.id===id);if(!order)return;
+      const pickup=mapUrl(order.pickupLocation),delivery=mapUrl(order.deliveryLocation);
+      if(pickup)window.open(pickup,'_blank','noopener');
+      if(delivery)setTimeout(()=>window.open(delivery,'_blank','noopener'),250);
+      if(!pickup&&!delivery)toast('ออร์เดอร์นี้ยังไม่มีพิกัด GPS');
+    };
+
+    function gpsErrorMessage(error){
+      const code=Number(error?.code||0);
+      if(code===1)return 'ไม่อนุญาตสิทธิ์ตำแหน่ง: ใน Chrome ให้แตะไอคอนปรับแต่ง/แม่กุญแจข้าง URL → สิทธิ์เว็บไซต์ → ตำแหน่ง → อนุญาต แล้วกลับมากดตรวจสอบอีกครั้ง';
+      if(code===2)return 'ไม่พบตำแหน่ง: โปรดเปิด GPS/ตำแหน่งของโทรศัพท์ ออกจากอาคารหรือรอสัญญาณสักครู่ แล้วกดลองใหม่';
+      if(code===3)return 'หมดเวลารอ GPS: โปรดตรวจอินเทอร์เน็ต เปิด GPS แล้วกดตรวจสอบอีกครั้ง';
+      return 'ไม่สามารถดึงตำแหน่งได้: โปรดเปิด GPS และอนุญาตสิทธิ์ตำแหน่งให้ Chrome แล้วลองใหม่';
+    }
+    function getLocation(){
+      const rider=currentRider();if(!rider)return;
+      if(!navigator.geolocation){
+        alert('เบราว์เซอร์นี้ไม่รองรับการดึงพิกัด GPS');
+        return;
+      }
+      toast('กำลังขอสิทธิ์เข้าถึง GPS…');
+      navigator.geolocation.getCurrentPosition(p=>{
+        rider.lastLocation={lat:p.coords.latitude,lng:p.coords.longitude,accuracy:Math.round(p.coords.accuracy||0),capturedAt:now(),capturedAtIso:new Date().toISOString()};
+        persist();
+        Cloud.saveRider(rider).catch(error=>console.warn('Cloud rider location sync skipped',error));
+        syncSessionUI();
+        toast('บันทึกพิกัด GPS สำเร็จ!');
+      },e=>{
+        console.warn('Geolocation error:',e);
+        const msg=gpsErrorMessage(e);
+        alert(msg);
+        toast(msg);
+      },{enableHighAccuracy:true,timeout:12000,maximumAge:10000});
+    }
+
+    // ORDER DETAIL & DELIVERY COMPLETION MODAL & WORKFLOW
+    window.openOrderModal=id=>{
+      State.activeModalOrderId=id;
+      const order=State.orders.find(o=>o.id===id);if(!order)return;
+      $('#modalOrderId').textContent=`ออร์เดอร์ ${order.id} · ${order.serviceType||'จัดส่ง'}`;
+      $('#modalOrderSubtitle').textContent=`ร้าน/จุดรับ: ${order.storeName||'-'} | ลูกค้า: ${order.name||'-'}`;
+      
+      const promptPay=State.config.payment?.promptPayId||'',qrImageUrl=State.config.payment?.qrImageUrl||'';
+      const totalPayable=Number(order.payable||order.total||0);
+      const deliveryFee=Number(order.deliveryFee||0);
+      const riderShare=Math.round(deliveryFee*.8*100)/100;
+      
+      $('#modalOrderBody').innerHTML=`
+        <div class="card" style="background:#f8fbfa;margin:0">
+          <b style="font-size:13px">สรุปรายการและเส้นทาง</b>
+          <div style="font-size:11px;color:var(--muted);margin-top:4px">
+            <b>📍 จุดรับ:</b> ${esc(order.pickupAddress||order.storeName||'-')}<br>
+            <b>🏁 จุดส่ง:</b> ${esc(order.deliveryAddress||order.address||'-')}<br>
+            <b>💰 ยอด COD / สินค้า:</b> ${money(totalPayable)} | <b style="color:var(--ok)">รายได้สุทธิที่จะได้รับ: ${money(riderShare)}</b>
+          </div>
+        </div>
+        <div class="card" style="margin:0">
+          <b style="font-size:13px">รายการที่ต้องตรวจรับจากร้าน</b>
+          <p style="font-size:11px;color:var(--muted);margin:4px 0 8px">โปรดตรวจชื่อ จำนวน และตัวเลือกเสริมกับร้านก่อนกดยืนยันรับสินค้าครบ</p>
+          ${orderItemsHtml(order.items)}
+        </div>
+        <div class="card" style="margin:0">
+          <b style="font-size:13px">ขั้นตอนที่ 1: ตรวจสอบพิกัด GPS ระยะจัดส่ง (ในรัศมี 50 เมตร)</b>
+          <p style="font-size:11px;color:var(--muted);margin:4px 0 10px">ระบบจะดึงพิกัดปัจจุบันของคุณและเทียบกับพิกัดจุดส่งของลูกค้า</p>
+          <button class="btn btn-sky btn-sm" type="button" onclick="verifyDeliveryGps('${order.id}')">📍 ตรวจสอบตำแหน่ง GPS ปัจจุบัน</button>
+          <div id="gpsVerifyResult" style="margin-top:8px;font-size:11px;font-weight:800;color:var(--muted)">ยังไม่ได้ตรวจสอบพิกัด</div>
+        </div>
+        <div class="card" style="margin:0">
+          <b style="font-size:13px">ขั้นตอนที่ 2: เลือกวิธีชำระเงินและรับเงินจากลูกค้า</b>
+          <div class="field" style="margin-top:8px">
+            <label>ช่องทางชำระเงิน</label>
+            <select id="completionPaymentMethod" onchange="togglePaymentForm(this.value)">
+              <option value="เงินสดปลายทาง (COD)">เงินสดปลายทาง (Cash / COD)</option>
+              <option value="โอนสแกน QR Code">โอนสแกน QR Code (บัญชีกลางแพลตฟอร์ม)</option>
+            </select>
+          </div>
+          <div id="cashPaymentSection" style="margin-top:10px;display:grid;gap:8px">
+            <div class="field">
+              <label>จำนวนเงินสดที่ไรเดอร์รับมา (บาท)</label>
+              <input id="cashReceivedInput" type="number" step="any" placeholder="${totalPayable}" oninput="calculateChange(${totalPayable})" />
+            </div>
+            <div style="font-size:12px;font-weight:900;color:var(--ok)" id="changeDisplay">เงินทอนลูกค้า: ฿0.00</div>
+          </div>
+          <div id="qrPaymentSection" style="margin-top:10px;display:none;text-align:center;padding:12px;background:#fff;border:1px solid var(--line);border-radius:12px">
+            <b style="font-size:12px;display:block;margin-bottom:6px">สแกน QR Code บัญชีกลางแพลตฟอร์ม</b>
+            <div id="qrCodeContainer" style="font-size:11px;color:var(--muted)">
+              ${qrImageUrl?`<img src="${esc(qrImageUrl)}" alt="QR Code รับชำระเงินของแพลตฟอร์ม" style="display:block;width:min(220px,100%);margin:0 auto 9px;border-radius:12px;border:1px solid var(--line)"><div style="font-size:12px;font-weight:900;color:var(--navy)">ยอดที่ต้องโอน: ${money(totalPayable)}</div>${promptPay?`<small>PromptPay / เลขบัญชี: ${esc(promptPay)}</small>`:''}`:promptPay?`<div style="font-size:14px;font-weight:900;color:var(--navy)">PromptPay / เลขบัญชี: ${esc(promptPay)}</div><small>ยอดที่ต้องโอน: ${money(totalPayable)}</small>`:'<span style="color:var(--danger)">ผู้ดูแลยังไม่ได้ตั้งค่า PromptPay / QR Code กลางในหน้า Admin</span>'}
+            </div>
+          </div>
+        </div>
+        <div class="card" style="margin:0">
+          <b style="font-size:13px">ขั้นตอนที่ 3: แนบหลักฐานรูปถ่ายส่งมอบ</b>
+          <div class="field" style="margin-top:8px">
+            <label>อัปโหลดรูปถ่ายสินค้า / จุดส่งมอบ (ระบบบีบอัดให้อัตโนมัติ &lt; 1 MB)</label>
+            <input type="file" accept="image/*" onchange="handleProofImage(this)" />
+          </div>
+          <div id="proofImagePreview" style="margin-top:8px;font-size:11px;color:var(--muted)">ยังไม่มีรูปหลักฐาน</div>
+        </div>
+        <button class="btn btn-main" style="width:100%;padding:14px;font-size:13px" onclick="confirmAndCompleteOrder('${order.id}')">✨ ยืนยันส่งสำเร็จและบันทึกรายได้</button>
+      `;
+      $('#orderModal').classList.add('open');$('#orderModal').setAttribute('aria-hidden','false');RiderFormDraftUX.restore();
+    };
+
+    window.closeOrderModal=()=>{
+      $('#orderModal').classList.remove('open');$('#orderModal').setAttribute('aria-hidden','true');
+      State.activeModalOrderId=null;
+    };
+
+    window.togglePaymentForm=val=>{
+      const isCash=val.includes('เงินสด');
+      $('#cashPaymentSection').style.display=isCash?'grid':'none';
+      $('#qrPaymentSection').style.display=isCash?'none':'block';
+    };
+
+    window.calculateChange=total=>{
+      const received=Number($('#cashReceivedInput')?.value)||0;
+      const change=Math.max(0,received-total);
+      $('#changeDisplay').textContent=`เงินทอนลูกค้า: ${money(change)}`;
+    };
+
+    window.verifyDeliveryGps=orderId=>{
+      const order=State.orders.find(o=>o.id===orderId);if(!order)return;
+      if(!navigator.geolocation)return toast('เบราว์เซอร์นี้ไม่รองรับ GPS');
+      toast('กำลังตรวจสอบพิกัดตำแหน่งคุณกับจุดส่ง…');
+      navigator.geolocation.getCurrentPosition(p=>{
+        const rLat=p.coords.latitude,rLng=p.coords.longitude;
+        const target=order.deliveryLocation||order.pickupLocation;
+        let distText='ไม่พบพิกัดจุดส่งในออร์เดอร์ (อนุญาตให้ผ่านได้)';
+        let ok=true;
+        if(target?.lat!==undefined&&target?.lng!==undefined){
+          const R=6371e3;
+          const dLat=(target.lat-rLat)*Math.PI/180,dLon=(target.lng-rLng)*Math.PI/180;
+          const a=Math.sin(dLat/2)*Math.sin(dLat/2)+Math.cos(rLat*Math.PI/180)*Math.cos(target.lat*Math.PI/180)*Math.sin(dLon/2)*Math.sin(dLon/2);
+          const c=2*Math.atan2(Math.sqrt(a),Math.sqrt(1-a));
+          const dist=R*c;
+          ok=dist<=50;
+          distText=`ระยะห่างจากจุดส่ง: ${Math.round(dist)} เมตร (${ok?'✓ อยู่ในรัศมี 50 ม.':'⚠ อยู่ห่างเกิน 50 ม.'})`;
+        }
+        const box=$('#gpsVerifyResult');
+        box.style.color=ok?'var(--ok)':'var(--danger)';
+        box.textContent=distText;
+        window._gpsVerifiedOk=ok;
+        toast(ok?'พิกัดผ่านเกณฑ์ 50 เมตรแล้ว':'ตำแหน่งคุณยังห่างจากจุดส่งเกิน 50 เมตร');
+      },e=>{
+        const msg=gpsErrorMessage(e),box=$('#gpsVerifyResult');
+        if(box){box.style.color='var(--danger)';box.textContent=msg}
+        alert(msg);
+        toast(msg);
+      },{enableHighAccuracy:true,timeout:10000});
+    };
+
+    async function compressRiderProofImage(file){
+      if(!file?.type?.startsWith('image/'))throw new Error('กรุณาเลือกรูปภาพจากไฟล์หรือกล้อง');
+      if(file.size>40*1024*1024)throw new Error('รูปมีขนาดเกิน 40 MB กรุณาเลือกรูปที่เล็กลง');
+      const source=URL.createObjectURL(file),image=await new Promise((resolve,reject)=>{const element=new Image();element.onload=()=>resolve(element);element.onerror=()=>reject(new Error('ไม่สามารถอ่านรูปภาพได้'));element.src=source});
+      URL.revokeObjectURL(source);let maxSide=Math.min(1600,Math.max(image.width,image.height)),quality=.88;
+      for(let attempt=0;attempt<12;attempt++){const ratio=Math.min(1,maxSide/Math.max(image.width,image.height)),width=Math.max(1,Math.round(image.width*ratio)),height=Math.max(1,Math.round(image.height*ratio)),canvas=document.createElement('canvas'),context=canvas.getContext('2d');canvas.width=width;canvas.height=height;context.drawImage(image,0,0,width,height);const blob=await new Promise(resolve=>canvas.toBlob(resolve,'image/jpeg',quality));if(blob&&blob.size<=1000000){const dataUrl=await new Promise((resolve,reject)=>{const reader=new FileReader();reader.onload=()=>resolve(reader.result);reader.onerror=()=>reject(new Error('ไม่สามารถแปลงรูปภาพได้'));reader.readAsDataURL(blob)});return {dataUrl,bytes:blob.size,compressed:blob.size<file.size}}if(quality>.5)quality=Math.max(.48,quality-.1);else{maxSide=Math.max(480,Math.round(maxSide*.78));quality=.82}}
+      throw new Error('ไม่สามารถบีบอัดรูปให้ต่ำกว่า 1 MB ได้ กรุณาถ่ายหรือเลือกรูปใหม่');
+    }
+    window.handleProofImage=async input=>{
+      const file=input.files?.[0];if(!file)return;
+      try{
+        toast('กำลังบีบอัดรูปหลักฐาน…');
+        const result=await compressRiderProofImage(file);window._capturedProofImage=result.dataUrl;
+        $('#proofImagePreview').innerHTML=`<img src="${result.dataUrl}" alt="หลักฐาน" style="max-height:110px;border-radius:8px;border:1px solid var(--line)" /><br><span style="color:var(--ok);font-weight:800">✓ แนบรูปหลักฐานสำเร็จ · ${Math.ceil(result.bytes/1024)} KB</span>`;
+        toast(result.compressed?'บีบอัดและแนบรูปหลักฐานแล้ว':'แนบรูปหลักฐานแล้ว');
+      }catch(error){input.value='';toast(error.message||'ไม่สามารถโหลดรูปภาพได้')}
+    };
+
+    window.confirmAndCompleteOrder=async id=>{
+      sync();const rider=currentRider(),order=State.orders.find(o=>o.id===id&&o.riderId===rider?.id);
+      if(!order)return toast('ไม่พบออร์เดอร์ของคุณ');
+      if(window._gpsVerifiedOk!==true)return toast('กรุณาตรวจสอบ GPS และอยู่ภายในรัศมี 50 เมตรของจุดส่งก่อนปิดงาน');
+      const paymentMethod=$('#completionPaymentMethod')?.value||'เงินสดปลายทาง (COD)';
+      const paymentDue=Number(order.payable||order.total||0);
+      const paymentReceived=paymentMethod==='เงินสดปลายทาง (COD)'?Math.max(0,Number($('#cashReceivedInput')?.value)||0):paymentDue;
+      const paymentChange=paymentMethod==='เงินสดปลายทาง (COD)'?Math.max(0,paymentReceived-paymentDue):0;
+      const proofImage=window._capturedProofImage||null;
+      
+      if(!confirm(`ยืนยันปิดงานส่งสำเร็จ\nออร์เดอร์: ${order.id}\nลูกค้า: ${order.name||'-'}\nวิธีชำระ: ${paymentMethod}\nรายได้สุทธิที่จะได้รับ: ${money(Number(order.deliveryFee||0)*.8)}`))return;
+
+      order.status='สำเร็จแล้ว';
+      order.completedAt=new Date().toISOString();
+      order.paymentMethod=paymentMethod;
+      order.paymentReceived=paymentReceived;
+      order.paymentChange=paymentChange;
+      order.paymentConfirmedAt=order.completedAt;
+      order.proofImage=proofImage;
+      rider.status='พร้อมรับงาน';
+      statusHistory(order,'สำเร็จแล้ว');
+      persist();
+
+      const deliveryFee=Number(order.deliveryFee||0);
+      const riderShare=Math.round(deliveryFee*.8*100)/100;
+      const platformShare=Math.round(deliveryFee*.2*100)/100;
+      const earningItem={
+        orderId:order.id,riderId:rider.id,deliveryFee,riderShare,platformShare,settlementStatus:'settled',completedAt:order.completedAt,
+        order:{id:order.id,store_name:order.storeName,customer_name:order.name,service_type:order.serviceType,payable:order.payable||order.total,delivery_fee:deliveryFee}
+      };
+      State.earnings.unshift(earningItem);
+      write('apcx_rider_earnings',State.earnings);
+
+      try{
+        State.isSyncing=true;
+        await Cloud.saveOrder(order);
+        await Cloud.saveRider(rider).catch(()=>{});
+        await Cloud.pullOrders();
+        await Cloud.pullEarnings(rider.id);
+        toast('ปิดงานส่งสำเร็จและบันทึกรายได้เรียบร้อยแล้ว!');
+      }catch(error){
+        console.warn('Cloud complete order sync failed',error);
+        toast('บันทึกในเครื่องสำเร็จ แต่วิทยุคลาวด์ขัดข้อง: '+(error.message||''));
+      }finally{
+        setTimeout(()=>State.isSyncing=false,1200);
+      }
+
+      closeOrderModal();
+      window._gpsVerifiedOk=null;
+      window._capturedProofImage=null;
+      render();
+    };
+
+    async function refreshFromCloud(silent=true){
+      if(State.isSyncing)return;
+      const rider=currentRider();if(!rider||!Cloud.session()?.access_token)return false;
+      try{
+        await Promise.all([Cloud.syncConfig(),Cloud.pullOrders(),Cloud.pullEarnings(rider.id)]);
+        render();if(!silent)toast('รีเฟรชข้อมูลจากฐานกลางแล้ว');return true;
+      }catch(error){
+        console.warn('Cloud rider refresh failed',error);
+        if(!silent)toast(error.message||'ไม่สามารถดึงข้อมูลจากฐานกลาง');
+        return false;
+      }
+    }
+
+    $('#loginBtn').onclick=async()=>{
+      const identifier=$('#riderIdentifier').value.trim(),password=$('#riderPassword').value;
+      if(!identifier||!password)return toast('กรอก Login ID/อีเมล และรหัสผ่านก่อน');
+      try{
+        const rider=await Cloud.login(identifier,password);
+        await refreshFromCloud(true);
+        render();toast('ยืนยันบัญชี Rider และดึงงานล่าสุดแล้ว');
+      }catch(error){toast(error.message||'เข้าสู่ระบบไม่สำเร็จ')}
+    };
+
+    $('#logoutBtn').onclick=()=>{
+      if(!confirm('ยืนยันออกจากระบบไรเดอร์หรือไม่?'))return;
+      State.session=null;localStorage.removeItem('apcx_rider_session');localStorage.removeItem('apcx_rider_supabase_session');render();
+    };
+
+    $('#locationBtn').onclick=getLocation;
+    $('#refreshBtn').onclick=()=>refreshFromCloud(false);
+    $('#saveAvailability').onclick=()=>{
+      const rider=currentRider(),next=$('#availability').value;if(!rider)return;
+      if(!confirm(`ยืนยันเปลี่ยนสถานะรับงานเป็น “${next}” หรือไม่?`))return;
+      rider.status=next;persist();
+      Cloud.saveRider(rider).catch(error=>console.warn('Cloud rider availability sync skipped',error));
+      render();toast('บันทึกสถานะแล้ว');
+    };
+
+    /* AP Ride uses a selected-Rider workflow and captures destination only after pickup. */
+    let rideDestinationMap=null,rideDestinationMarker=null,rideDestinationPoint=null,rideDestinationOrderId=null;
+    const distanceMeters=(from,to)=>{if(!from||!to||from.lat===undefined||to.lat===undefined)return null;const R=6371e3,dLat=(Number(to.lat)-Number(from.lat))*Math.PI/180,dLon=(Number(to.lng)-Number(from.lng))*Math.PI/180,a=Math.sin(dLat/2)**2+Math.cos(Number(from.lat)*Math.PI/180)*Math.cos(Number(to.lat)*Math.PI/180)*Math.sin(dLon/2)**2;return R*2*Math.atan2(Math.sqrt(a),Math.sqrt(1-a))};
+    const rideDestinationInputs=()=>({lat:Number($('#rideDestinationLat')?.value),lng:Number($('#rideDestinationLng')?.value)});
+    const setRideDestinationPoint=(point,pan=true)=>{if(!point||!Number.isFinite(Number(point.lat))||!Number.isFinite(Number(point.lng)))return;rideDestinationPoint={lat:Number(point.lat),lng:Number(point.lng)};if($('#rideDestinationLat'))$('#rideDestinationLat').value=rideDestinationPoint.lat.toFixed(6);if($('#rideDestinationLng'))$('#rideDestinationLng').value=rideDestinationPoint.lng.toFixed(6);if(window.L&&rideDestinationMap){if(!rideDestinationMarker){rideDestinationMarker=L.marker([rideDestinationPoint.lat,rideDestinationPoint.lng],{draggable:true}).addTo(rideDestinationMap);rideDestinationMarker.on('dragend',event=>setRideDestinationPoint(event.target.getLatLng(),false))}else rideDestinationMarker.setLatLng([rideDestinationPoint.lat,rideDestinationPoint.lng]);if(pan)rideDestinationMap.setView([rideDestinationPoint.lat,rideDestinationPoint.lng],16,{animate:false})}const hint=$('#rideDestinationMapHint');if(hint)hint.textContent=`เลือกพิกัด ${rideDestinationPoint.lat.toFixed(6)}, ${rideDestinationPoint.lng.toFixed(6)} แล้ว`};
+    window.confirmRideJob=async id=>{sync();const rider=currentRider(),order=State.orders.find(o=>o.id===id);if(!rider||!order||order.serviceType!=='ap_ride')return toast('ไม่พบงาน AP Ride ที่เลือก');if(order.rideSelectedRiderId!==rider.id)return toast('งานนี้ไม่ได้ส่งถึงบัญชี Rider ของคุณ');if(!confirm(`ยืนยันรับงาน AP Ride\nผู้โดยสาร: ${order.name||'-'}\nจุดรับ: ${order.pickupAddress||'-'}\n\nเมื่อยืนยัน คุณต้องไปถึงจุดรับและยืนยัน GPS ภายใน 50 เมตรก่อนตั้งจุดหมาย`))return;try{State.isSyncing=true;await Cloud.request('rpc/rider_confirm_ride_job',{method:'POST',body:JSON.stringify({p_order_id:id})});rider.status='กำลังส่งงาน';persist();await Cloud.saveRider(rider).catch(()=>{});await Cloud.pullOrders();await Cloud.pullEarnings(rider.id);render();toast('ยืนยันรับงาน AP Ride แล้ว กรุณาไปยังจุดรับผู้โดยสาร')}catch(error){toast('ยืนยันรับงาน AP Ride ไม่สำเร็จ: '+error.message)}finally{setTimeout(()=>State.isSyncing=false,1200)}};
+    window.arriveRidePickup=id=>{sync();const rider=currentRider(),order=State.orders.find(o=>o.id===id&&o.riderId===rider?.id);if(!order||order.serviceType!=='ap_ride')return toast('ไม่พบงาน AP Ride ของคุณ');if(!navigator.geolocation)return toast('เบราว์เซอร์นี้ไม่รองรับ GPS');toast('กำลังตรวจสอบระยะห่างจากจุดรับ…');navigator.geolocation.getCurrentPosition(async position=>{const location={lat:position.coords.latitude,lng:position.coords.longitude,accuracy:Math.round(position.coords.accuracy||0),capturedAt:now(),capturedAtIso:new Date().toISOString()},distance=distanceMeters(location,order.pickupLocation);if(distance!==null&&distance>50)return toast(`ยังห่างจากจุดรับ ${Math.round(distance)} เมตร ต้องอยู่ในรัศมี 50 เมตร`);if(!confirm(`ยืนยันถึงจุดรับผู้โดยสาร${distance!==null?` (ห่าง ${Math.round(distance)} เมตร)`:''}?\nระบบจะเปิดขั้นตอนตั้งจุดหมายร่วมกับผู้โดยสาร`))return;try{State.isSyncing=true;await Cloud.request('delivery_orders?id=eq.'+encodeURIComponent(id)+'&rider_id=eq.'+encodeURIComponent(rider.id),{method:'PATCH',headers:{Prefer:'return=minimal'},body:JSON.stringify({status:'ถึงจุดรับผู้โดยสาร',ride_arrived_at:new Date().toISOString(),ride_arrived_location:location,updated_at:new Date().toISOString()})});await Cloud.request('order_status_events',{method:'POST',headers:{Prefer:'return=minimal'},body:JSON.stringify({order_id:id,status:'ถึงจุดรับผู้โดยสาร',actor_id:State.session?.userId||null,actor_label:'ไรเดอร์: '+rider.name})}).catch(()=>{});await Cloud.pullOrders();render();toast('ยืนยันถึงจุดรับแล้ว ตั้งจุดหมายร่วมกับผู้โดยสารได้เลย')}catch(error){toast('บันทึกการถึงจุดรับไม่สำเร็จ: '+error.message)}finally{setTimeout(()=>State.isSyncing=false,1200)}},error=>toast(gpsErrorMessage(error)),{enableHighAccuracy:true,timeout:20000,maximumAge:0})};
+    function ensureRideDestinationModal(){if($('#rideDestinationModal'))return;const modal=document.createElement('div');modal.id='rideDestinationModal';modal.className='modal-overlay';modal.setAttribute('aria-hidden','true');modal.innerHTML=`<div class="modal" role="dialog" aria-modal="true" aria-labelledby="rideDestinationTitle"><div class="modal-head"><div><h2 id="rideDestinationTitle">ตั้งจุดหมาย AP Ride</h2><p>กำหนดจุดหมายร่วมกับผู้โดยสาร แล้วระบบจะคำนวณค่าโดยสารอัตโนมัติ</p></div><button type="button" class="modal-close" onclick="closeRideDestinationModal()" aria-label="ปิด">×</button></div><div class="notice" style="margin:0 0 14px;background:#edf8f4;color:#276651"><b>อัตราค่าโดยสาร</b><br>เริ่มต้น ฿50 รวม 3 กม.แรก และเพิ่ม ฿12 ต่อกม.สำหรับระยะที่เกิน</div><div class="field"><label>รายละเอียดจุดหมาย</label><input id="rideDestinationAddress" maxlength="500" placeholder="เช่น ตลาดสดเทศบาล ประตู 2" /></div><div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:12px"><div class="field"><label>Latitude</label><input id="rideDestinationLat" inputmode="decimal" placeholder="13.756300" onchange="setRideDestinationFromInputs()" /></div><div class="field"><label>Longitude</label><input id="rideDestinationLng" inputmode="decimal" placeholder="100.501800" onchange="setRideDestinationFromInputs()" /></div></div><div class="location-actions"><button type="button" class="btn btn-plain btn-sm" onclick="useCurrentRideDestinationGps()">ใช้ GPS ณ จุดหมาย</button><button type="button" class="btn btn-plain btn-sm" onclick="setRideDestinationFromInputs()">ตั้งหมุดจากพิกัด</button></div><div id="rideDestinationMap" style="height:320px;min-height:260px;border:1px solid var(--line);border-radius:14px;overflow:hidden;margin-top:12px;background:#eef7fb"></div><small id="rideDestinationMapHint" style="display:block;margin-top:8px;color:var(--muted)">แตะบนแผนที่เพื่อเลือกจุดหมาย หรือใช้ GPS/กรอกพิกัดด้านบน</small><div style="display:flex;justify-content:flex-end;gap:8px;margin-top:17px"><button type="button" class="btn btn-plain" onclick="closeRideDestinationModal()">ยกเลิก</button><button type="button" class="btn btn-main" onclick="saveRideDestination()">บันทึกจุดหมายและคำนวณค่าโดยสาร</button></div></div>`;document.body.appendChild(modal)};
+    window.openRideDestinationModal=id=>{sync();const order=State.orders.find(o=>o.id===id&&o.serviceType==='ap_ride');if(!order)return toast('ไม่พบงาน AP Ride');ensureRideDestinationModal();rideDestinationOrderId=id;$('#rideDestinationAddress').value=order.deliveryAddress&&order.deliveryAddress!=='รอ Rider ตั้งจุดหมายร่วมกับผู้โดยสาร'?order.deliveryAddress:'';const seed=order.deliveryLocation||currentRider()?.lastLocation||order.pickupLocation||{lat:13.7563,lng:100.5018};rideDestinationPoint={lat:Number(seed.lat),lng:Number(seed.lng)};$('#rideDestinationModal').classList.add('open');$('#rideDestinationModal').setAttribute('aria-hidden','false');RiderFormDraftUX.restore();setTimeout(()=>{const canvas=$('#rideDestinationMap');if(window.L){if(!rideDestinationMap){rideDestinationMap=L.map(canvas,{zoomControl:true,attributionControl:true});L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png',{maxZoom:19,attribution:'© OpenStreetMap contributors'}).addTo(rideDestinationMap);rideDestinationMap.on('click',event=>setRideDestinationPoint(event.latlng,true))}rideDestinationMap.invalidateSize();setRideDestinationPoint(rideDestinationPoint,true)}else setRideDestinationPoint(rideDestinationPoint,false)},100)};
+    window.closeRideDestinationModal=()=>{$('#rideDestinationModal')?.classList.remove('open');$('#rideDestinationModal')?.setAttribute('aria-hidden','true');rideDestinationOrderId=null};
+    window.setRideDestinationFromInputs=()=>{const point=rideDestinationInputs();if(!Number.isFinite(point.lat)||!Number.isFinite(point.lng)||Math.abs(point.lat)>90||Math.abs(point.lng)>180)return toast('กรุณากรอกพิกัด Latitude และ Longitude ให้ถูกต้อง');setRideDestinationPoint(point,true)};
+    window.useCurrentRideDestinationGps=()=>{if(!navigator.geolocation)return toast('เบราว์เซอร์นี้ไม่รองรับ GPS');toast('กำลังดึงพิกัด GPS ณ จุดหมาย…');navigator.geolocation.getCurrentPosition(position=>{setRideDestinationPoint({lat:position.coords.latitude,lng:position.coords.longitude},true);toast('ตั้งหมุดจาก GPS ปัจจุบันแล้ว')},error=>toast(gpsErrorMessage(error)),{enableHighAccuracy:true,timeout:20000,maximumAge:0})};
+    window.saveRideDestination=async()=>{sync();const rider=currentRider(),order=State.orders.find(o=>o.id===rideDestinationOrderId&&o.riderId===rider?.id);const address=$('#rideDestinationAddress')?.value.trim()||'';if(!order||order.serviceType!=='ap_ride')return toast('ไม่พบงาน AP Ride ของคุณ');if(!address)return toast('กรุณาระบุรายละเอียดจุดหมาย');if(!rideDestinationPoint)return toast('กรุณาเลือกพิกัดจุดหมายบนแผนที่ ใช้ GPS หรือกรอกพิกัด');if(!confirm(`ยืนยันตั้งจุดหมาย\n${address}\nระบบจะคำนวณค่าโดยสารจริงตามระยะทางก่อนเริ่มเดินทาง`))return;try{State.isSyncing=true;const fare=await Cloud.request('rpc/rider_set_ride_destination',{method:'POST',body:JSON.stringify({p_order_id:order.id,p_destination_address:address,p_destination_location:rideDestinationPoint})});const value=Number(Array.isArray(fare)?fare[0]:fare)||50;await Cloud.pullOrders();render();closeRideDestinationModal();toast(`บันทึกจุดหมายแล้ว ค่าโดยสาร ${money(value)} กรุณาพาผู้โดยสารไปยังจุดหมาย`)}catch(error){toast('บันทึกจุดหมายไม่สำเร็จ: '+error.message)}finally{setTimeout(()=>State.isSyncing=false,1200)}};
+    const standardOrderModal=window.openOrderModal;window.openOrderModal=id=>{const order=State.orders.find(o=>o.id===id);if(order?.serviceType!=='ap_ride')return standardOrderModal(id);State.activeModalOrderId=id;const due=Number(order.payable||order.total||0),riderIncome=money(Number(order.deliveryFee||0)*.8),promptPay=State.config.payment?.promptPayId||'',qr=State.config.payment?.qrImageUrl||'';$('#modalOrderId').textContent=`AP Ride ${order.id}`;$('#modalOrderSubtitle').textContent=`ผู้โดยสาร: ${order.name||'-'} · ${order.ridePassengerCount||1} คน`;$('#modalOrderBody').innerHTML=`<div class="card" style="background:#f8fbfa;margin:0"><b style="font-size:13px">สรุปการเดินทาง</b><div style="font-size:11px;color:var(--muted);margin-top:5px"><b>📍 จุดรับ:</b> ${esc(order.pickupAddress||'-')}<br><b>🏁 จุดหมาย:</b> ${esc(order.deliveryAddress||'-')}<br><b>💰 ค่าโดยสาร:</b> ${money(due)} · <b style="color:var(--ok)">รายได้สุทธิที่จะได้รับ: ${riderIncome}</b></div></div><div class="card" style="margin:0"><b style="font-size:13px">ขั้นตอนที่ 1: ยืนยันถึงจุดหมาย (GPS 50 เมตร)</b><p style="font-size:11px;color:var(--muted);margin:4px 0 10px">ตรวจสอบว่าคุณอยู่ภายในรัศมี 50 เมตรของจุดหมายก่อนปิดงาน</p><button class="btn btn-sky btn-sm" type="button" onclick="verifyDeliveryGps('${order.id}')">📍 ตรวจสอบตำแหน่ง GPS ปัจจุบัน</button><div id="gpsVerifyResult" style="margin-top:8px;font-size:11px;font-weight:800;color:var(--muted)">ยังไม่ได้ตรวจสอบพิกัด</div></div><div class="card" style="margin:0"><b style="font-size:13px">ขั้นตอนที่ 2: รับชำระค่าโดยสาร</b><div class="field" style="margin-top:8px"><label>ช่องทางชำระเงิน</label><select id="completionPaymentMethod" onchange="togglePaymentForm(this.value)"><option value="เงินสดปลายทาง (COD)">เงินสด</option><option value="โอนสแกน QR Code">โอนสแกน QR Code</option></select></div><div id="cashPaymentSection" style="margin-top:10px;display:grid;gap:8px"><div class="field"><label>จำนวนเงินสดที่รับมา (บาท)</label><input id="cashReceivedInput" type="number" step="any" placeholder="${due}" oninput="calculateChange(${due})" /></div><div style="font-size:12px;font-weight:900;color:var(--ok)" id="changeDisplay">เงินทอนผู้โดยสาร: ฿0.00</div></div><div id="qrPaymentSection" style="margin-top:10px;display:none;text-align:center;padding:12px;background:#fff;border:1px solid var(--line);border-radius:12px">${qr?`<img src="${esc(qr)}" alt="QR Code รับชำระเงิน" style="display:block;width:min(220px,100%);margin:0 auto 9px;border-radius:12px;border:1px solid var(--line)">`:`<b>${promptPay?esc(promptPay):'ผู้ดูแลยังไม่ได้ตั้งค่า QR Code'}</b>`}<div style="font-size:12px;font-weight:900;color:var(--navy);margin-top:6px">ยอดที่ต้องชำระ: ${money(due)}</div></div></div><div class="card" style="margin:0"><b style="font-size:13px">ขั้นตอนที่ 3: แนบภาพหลักฐานถึงจุดหมาย</b><div class="field" style="margin-top:8px"><label>อัปโหลดรูปจุดส่งมอบ (ระบบบีบอัดให้อัตโนมัติ)</label><input type="file" accept="image/*" onchange="handleProofImage(this)" /></div><div id="proofImagePreview" style="margin-top:8px;font-size:11px;color:var(--muted)">ยังไม่มีรูปหลักฐาน</div></div><button class="btn btn-main" style="width:100%;padding:14px;font-size:13px" onclick="confirmAndCompleteOrder('${order.id}')">✨ ยืนยันถึงจุดหมายและปิดงาน</button>`;$('#orderModal').classList.add('open');$('#orderModal').setAttribute('aria-hidden','false');RiderFormDraftUX.restore()};
+    const standardJobCard=jobCard;
+    jobCard=(order,mode)=>{
+      if(order.serviceType!=='ap_ride')return standardJobCard(order,mode);
+      const mine=mode==='mine',passengers=Number(order.ridePassengerCount||1),status=order.status||'',destination=order.deliveryAddress||'รอกำหนดจุดหมายเมื่อถึงจุดรับ';
+      let action='';
+      if(!mine)action=`<button class="btn btn-main btn-sm" onclick="confirmRideJob('${order.id}')">ยืนยันรับงาน AP Ride</button>`;
+      else if(status==='ไรเดอร์กำลังไปรับผู้โดยสาร')action=`<button class="btn btn-sky btn-sm" onclick="arriveRidePickup('${order.id}')">📍 ยืนยันถึงจุดรับ (GPS 50 ม.)</button>`;
+      else if(status==='ถึงจุดรับผู้โดยสาร')action=`<button class="btn btn-sky btn-sm" onclick="openRideDestinationModal('${order.id}')">🗺️ ตั้งจุดหมายกับผู้โดยสาร</button>`;
+      else if(status==='กำลังพาผู้โดยสารไปจุดหมาย')action=`<button class="btn btn-main btn-sm" onclick="openOrderModal('${order.id}')">🏁 ถึงจุดหมาย / ปิดงาน</button>`;
+      return `<article class="job"><div class="job-top"><div><b>🏍️ AP Ride · ${esc(order.id)}</b><small>ผู้โดยสาร ${passengers} คน · ค่าโดยสารปัจจุบัน ${money(order.payable||order.total||0)}</small><small style="color:var(--ok);font-weight:800">รายได้สุทธิที่จะได้รับ: ${money(Number(order.deliveryFee||0)*.8)}</small><small>ผู้โดยสาร: ${esc(order.name||'ไม่ระบุ')}</small></div><span class="status ${status==='กำลังพาผู้โดยสารไปจุดหมาย'?'wait':''}">${esc(status)}</span></div><div class="route"><div class="point"><strong>📍 จุดรับผู้โดยสาร</strong>${esc(order.pickupAddress||'-')}<br>${mapButton(order.pickupLocation,'เปิดจุดรับ')}</div><div class="point"><strong>🏁 จุดหมาย</strong>${esc(destination)}<br>${mapButton(order.deliveryLocation,'เปิดจุดหมาย')}</div></div>${order.note?`<small>หมายเหตุ: ${esc(order.note)}</small>`:''}<div class="job-actions">${action}${mine?`<button class="btn btn-plain btn-sm" onclick="openBothMaps('${order.id}')">เปิดเส้นทางทั้งหมด</button>`:''}</div></article>`;
+    };
+    const rideAwareRender=render;
+    render=()=>{
+      rideAwareRender();sync();const rider=currentRider();if(!rider)return;
+      const active=State.orders.filter(order=>!['สำเร็จแล้ว','ยกเลิก'].includes(order.status));
+      const open=active.filter(order=>!order.riderId&&(order.serviceType!=='ap_ride'||order.rideSelectedRiderId===rider.id));
+      const mine=active.filter(order=>order.riderId===rider.id);
+      $('#newCount').textContent=open.length;$('#myCount').textContent=mine.length;
+      const section=(title,rows,mode)=>rows.length?`<section style="margin:0 0 16px"><b style="display:block;font-size:12px;color:var(--navy);margin:0 0 8px">${title}</b>${rows.map(order=>jobCard(order,mode)).join('')}</section>`:'';
+      $('#availableJobs').innerHTML=open.length?section('🏍️ งาน AP Ride ที่ลูกค้าเลือกคุณ',open.filter(order=>order.serviceType==='ap_ride'),'open')+section('📦 งานจัดส่งและฝากซื้อ',open.filter(order=>order.serviceType!=='ap_ride'),'open'):'<div class="empty">ไม่มีงานใหม่ในขณะนี้</div>';
+      $('#myJobs').innerHTML=mine.length?section('🏍️ งาน AP Ride ของฉัน',mine.filter(order=>order.serviceType==='ap_ride'),'mine')+section('📦 งานจัดส่งและฝากซื้อของฉัน',mine.filter(order=>order.serviceType!=='ap_ride'),'mine'):'<div class="empty">คุณยังไม่มีงานที่กำลังดำเนินการ</div>';
+    };
+
+    window.addEventListener('storage',e=>{if(['apcx_orders','apcx_riders','apcx_rider_earnings','apcx_rider_supabase_session','apcx_config'].includes(e.key)){State.config=read('apcx_config',State.config);render()}});
+    window.addEventListener('focus',()=>refreshFromCloud(true));
+    document.addEventListener('visibilitychange',()=>{if(document.visibilityState==='visible')refreshFromCloud(true)});
+    render();setTimeout(()=>refreshFromCloud(true),200);setInterval(()=>refreshFromCloud(true),15000);
+  </script>
+  <script>
+    const ImageSourceChoices={styleReady:false,ensureStyle(){if(this.styleReady)return;this.styleReady=true;const style=document.createElement('style');style.textContent='.media-source-actions{display:flex;gap:8px;flex-wrap:wrap;margin-top:8px}.media-source-actions button{flex:1 1 145px;min-height:42px;font-weight:900}.media-source-file-name{display:block;margin-top:7px;color:var(--muted);font-size:10px;line-height:1.45}';document.head.appendChild(style)},apply(root=document){this.ensureStyle();const selector='input[type="file"][accept*="image"]',inputs=[...(root.matches?.(selector)?[root]:[]),...root.querySelectorAll?.(selector)||[]];inputs.forEach(input=>{if(input.dataset.sourceChoiceReady)return;input.dataset.sourceChoiceReady='true';input.removeAttribute('capture');input.title='เลือกภาพจากคลังไฟล์';input.style.cssText+=';position:absolute!important;width:1px!important;height:1px!important;opacity:0!important;pointer-events:none!important';input.tabIndex=-1;const oldHint=input.nextElementSibling;if(oldHint?.tagName==='SMALL')oldHint.textContent='เลือกแหล่งรูปภาพที่ต้องการ ระบบจะบีบอัดรูปอัตโนมัติ';const choices=document.createElement('div');choices.className='media-source-actions';choices.innerHTML='<button type="button" class="btn btn-plain">เลือกจากคลังไฟล์</button><button type="button" class="btn btn-main">ถ่ายรูปด้วยกล้อง</button>';const fileName=document.createElement('small');fileName.className='media-source-file-name';fileName.textContent='ยังไม่ได้เลือกภาพ';const openPicker=useCamera=>{if(useCamera)input.setAttribute('capture','environment');else input.removeAttribute('capture');input.click()};choices.children[0].addEventListener('click',()=>openPicker(false));choices.children[1].addEventListener('click',()=>openPicker(true));input.addEventListener('change',()=>{fileName.textContent=input.files?.[0]?`เลือกแล้ว: ${input.files[0].name}`:'ยังไม่ได้เลือกภาพ';input.removeAttribute('capture')});input.insertAdjacentElement('afterend',choices);choices.insertAdjacentElement('afterend',fileName)})}};ImageSourceChoices.apply();new MutationObserver(records=>records.forEach(record=>record.addedNodes.forEach(node=>{if(node.nodeType===1)ImageSourceChoices.apply(node)}))).observe(document.body,{childList:true,subtree:true});
+  </script>
+  <style>
+    .error-report-fab{position:fixed;left:max(14px,env(safe-area-inset-left));bottom:max(18px,env(safe-area-inset-bottom));z-index:90;background:#fff;border:1px solid #b9d9ee;color:var(--navy);padding:10px 12px;border-radius:13px;box-shadow:0 12px 26px rgba(16,43,73,.16);font-size:10px;font-weight:950}.error-evidence-preview{max-width:100%;max-height:160px;border:1px solid var(--line);border-radius:10px;object-fit:contain;background:#f4f9fc}
+  </style>
+  <script>
+    const RiderErrorMonitor={source:'rider',logging:false,seen:new Map(),redact(value=''){return String(value).slice(0,2400).replace(/(authorization|bearer|token|api[_ -]?key|password|secret)\s*[:=]\s*[^\s,;]+/ig,'$1=[REDACTED]').replace(/[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}/ig,'[EMAIL_REDACTED]').replace(/(?:\+66|0)\d{8,10}/g,'[PHONE_REDACTED]').replace(/sb_publishable_[A-Za-z0-9_-]+/ig,'[PUBLISHABLE_KEY_REDACTED]')},async post(path,options){return await this.rawRequest(path,options)},async capture(error,meta={}){const session=Cloud.session(),message=this.redact(error?.message||error||'Unknown error'),signature=[meta.event_type||'runtime',message,location.pathname].join('|'),last=this.seen.get(signature)||0;if(!session?.user?.id||this.logging||Date.now()-last<120000)return;this.seen.set(signature,Date.now());this.logging=true;try{await this.post('error_reports',{method:'POST',headers:{Prefer:'return=minimal'},body:JSON.stringify({reporter_id:session.user.id,reporter_role:'rider',app_source:this.source,source_type:meta.source_type||'automatic',severity:/permission|forbidden|payment|wallet|security/i.test(message)?'high':'medium',error_code:String(meta.error_code||error?.name||'RIDER_ERROR').replace(/[^A-Za-z0-9_:. -]/g,'').slice(0,100),title:'ตรวจพบข้อผิดพลาดใน Rider Console',message,route:location.pathname,sanitized_context:{event_type:meta.event_type||'runtime',screen:document.querySelector('.rider-page.active')?.id||'',app_version:'web-2026.08'}})})}catch{}finally{this.logging=false}},async upload(file){const session=Cloud.session();if(!session?.user?.id)throw new Error('กรุณาเข้าสู่ระบบก่อนแนบภาพ');const compressed=await compressRiderProofImage(file),blob=await fetch(compressed.dataUrl).then(res=>res.blob()),path=`${session.user.id}/${Date.now()}-${crypto.randomUUID().slice(0,8)}.jpg`,response=await fetch(`${Cloud.url}/storage/v1/object/error-evidence/${path}`,{method:'POST',headers:{apikey:Cloud.key,Authorization:'Bearer '+session.access_token,'Content-Type':blob.type,'x-upsert':'false'},body:blob});if(!response.ok)throw new Error('ไม่สามารถบันทึกภาพหลักฐานได้');return path},ensureModal(){if($('#riderErrorReportModal'))return;const modal=document.createElement('div');modal.id='riderErrorReportModal';modal.className='modal-overlay';modal.innerHTML='<form class="modal" id="riderErrorReportForm"><div style="display:flex;justify-content:space-between;gap:10px"><div><h2 style="margin:0;font-size:18px">แจ้งปัญหาการใช้งาน</h2><p style="margin:4px 0 14px;color:var(--muted);font-size:11px">ระบบจะตัดข้อมูลลับจากข้อความก่อนบันทึก</p></div><button class="btn btn-plain btn-sm" type="button" onclick="closeRiderErrorReport()">ปิด</button></div><div class="notice" style="margin:0 0 13px"><b>ตรวจภาพก่อนแนบ</b><br>เบลอชื่อ เบอร์โทร ที่อยู่ ยอดเงิน รหัสผ่าน QR และข้อมูลของบุคคลอื่น ภาพจะเห็นได้เฉพาะ Master Admin</div><div class="field"><label>สรุปปัญหา</label><input id="riderErrorTitle" maxlength="180" required placeholder="เช่น ยืนยันถึงจุดรับไม่ได้" /></div><div class="field" style="margin-top:11px"><label>รายละเอียด</label><textarea id="riderErrorMessage" rows="4" maxlength="2400" required placeholder="อธิบายขั้นตอนที่ทำ โดยไม่ใส่รหัสผ่านหรือข้อมูลบัตร"></textarea></div><div class="field" style="margin-top:11px"><label>ภาพหน้าจอ (ไม่บังคับ)</label><input id="riderErrorEvidence" type="file" accept="image/jpeg,image/png,image/webp" capture="environment" /><div id="riderErrorPreview"></div></div><label style="display:flex;gap:8px;align-items:flex-start;margin-top:12px;font-size:10px;line-height:1.5"><input id="riderErrorPrivacy" type="checkbox" required /><span>ฉันตรวจแล้วว่าภาพไม่มีข้อมูลส่วนบุคคลหรือข้อมูลลับของผู้อื่น</span></label><div style="display:flex;justify-content:flex-end;gap:8px;margin-top:16px"><button class="btn btn-plain" type="button" onclick="closeRiderErrorReport()">ยกเลิก</button><button class="btn btn-main" type="submit">ส่งเคสตรวจสอบ</button></div></form>';document.body.appendChild(modal);$('#riderErrorEvidence').onchange=async event=>{const file=event.target.files?.[0];if(!file)return;try{const result=await compressRiderProofImage(file);$('#riderErrorPreview').innerHTML=`<img class="error-evidence-preview" src="${result.dataUrl}" alt="ตัวอย่างภาพ" />`}catch(error){event.target.value='';$('#riderErrorPreview').textContent=error.message}};$('#riderErrorReportForm').onsubmit=async event=>{event.preventDefault();const session=Cloud.session();if(!session?.user?.id)return toast('กรุณาเข้าสู่ระบบก่อนส่งเคส','warning');const button=event.submitter;button.disabled=true;button.textContent='กำลังส่ง…';try{const file=$('#riderErrorEvidence').files?.[0],evidencePath=file?await this.upload(file):null,rows=await this.post('error_reports',{method:'POST',headers:{Prefer:'return=representation'},body:JSON.stringify({reporter_id:session.user.id,reporter_role:'rider',app_source:this.source,source_type:'manual',severity:'medium',error_code:'USER_REPORTED',title:$('#riderErrorTitle').value,message:$('#riderErrorMessage').value,route:location.pathname,sanitized_context:{event_type:'manual_report',screen:document.querySelector('.rider-page.active')?.id||'',app_version:'web-2026.08'},evidence_path:evidencePath})});closeRiderErrorReport();toast(`ส่งเคสแล้ว${rows?.[0]?.id?` · เลขอ้างอิง ${rows[0].id.slice(0,8)}`:''}`)}catch(error){toast('ส่งเคสไม่สำเร็จ: '+error.message,'error')}finally{button.disabled=false;button.textContent='ส่งเคสตรวจสอบ'}}},open(){if(!Cloud.session()?.user?.id)return toast('กรุณาเข้าสู่ระบบก่อนแจ้งปัญหา','warning');this.ensureModal();$('#riderErrorReportForm').reset();$('#riderErrorPreview').innerHTML='';$('#riderErrorReportModal').classList.add('open')},close(){$('#riderErrorReportModal')?.classList.remove('open')},init(){this.rawRequest=Cloud.request.bind(Cloud);Cloud.request=async(...args)=>{try{return await this.rawRequest(...args)}catch(error){this.capture(error,{event_type:'supabase_request',error_code:'SUPABASE_REQUEST'});throw error}};window.addEventListener('error',event=>this.capture(event.error||event.message,{event_type:'window_error',error_code:event.error?.name||'WINDOW_ERROR'}));window.addEventListener('unhandledrejection',event=>this.capture(event.reason,{event_type:'unhandled_rejection',error_code:event.reason?.name||'PROMISE_REJECTION'}));const button=document.createElement('button');button.type='button';button.className='error-report-fab';button.textContent='⚑ แจ้งปัญหา';button.onclick=()=>this.open();document.body.appendChild(button)}};window.openRiderErrorReport=()=>RiderErrorMonitor.open();window.closeRiderErrorReport=()=>RiderErrorMonitor.close();RiderErrorMonitor.init();
+  </script>
+  <style>.error-report-fab{display:none!important}</style>
+  <script>
+    /* Make asynchronous role login obvious in Android WebView instead of looking like an unresponsive button. */
+    (()=>{
+      const button=$('#loginBtn');
+      if(!button||!window.Cloud)return;
+      let pending=false;
+      const runWithTimeout=(job,ms=15000)=>Promise.race([job,new Promise((_,reject)=>setTimeout(()=>reject(new Error('การเชื่อมต่อใช้เวลานานกว่าปกติ กรุณาตรวจสอบอินเทอร์เน็ตแล้วลองอีกครั้ง')),ms))]);
+      button.onclick=async()=>{
+        if(pending)return;
+        const identifier=$('#riderIdentifier').value.trim(),password=$('#riderPassword').value;
+        if(!identifier||!password)return toast('กรอก Login ID/อีเมล และรหัสผ่านก่อน');
+        pending=true;
+        const originalLabel=button.textContent;
+        button.disabled=true;
+        button.setAttribute('aria-busy','true');
+        button.textContent='กำลังยืนยันบัญชี…';
+        try{
+          await runWithTimeout((async()=>{await Cloud.login(identifier,password);await refreshFromCloud(true)})());
+          render();
+          toast('เข้าสู่ Rider Console สำเร็จแล้ว');
+        }catch(error){
+          const message=String(error?.message||'เข้าสู่ระบบไม่สำเร็จ');
+          const friendly=/อีเมล\/รหัส ID หรือรหัสผ่านไม่ถูกต้อง|invalid login credentials/i.test(message)
+            ? 'อีเมล/Login ID หรือรหัสผ่านไม่ถูกต้อง กรุณาตรวจสอบอีกครั้ง'
+            : message;
+          toast(friendly,'error');
+        }finally{
+          pending=false;
+          button.disabled=false;
+          button.removeAttribute('aria-busy');
+          button.textContent=originalLabel;
+        }
+      };
+    })();
+  </script>
+  <script>
+    /* Keep the optional support modal dismissible so it cannot trap the Rider workspace. */
+    (()=>{const baseEnsure=RiderErrorMonitor.ensureModal.bind(RiderErrorMonitor),baseOpen=RiderErrorMonitor.open.bind(RiderErrorMonitor);let opening=false;const bind=()=>{const modal=$('#riderErrorReportModal');if(!modal||modal.dataset.safeDismiss)return;modal.dataset.safeDismiss='true';modal.setAttribute('aria-hidden','true');modal.addEventListener('pointerdown',event=>{if(event.target===modal)RiderErrorMonitor.close()});document.addEventListener('keydown',event=>{if(event.key==='Escape'&&modal.classList.contains('open'))RiderErrorMonitor.close()})};RiderErrorMonitor.ensureModal=function(){baseEnsure();bind()};RiderErrorMonitor.open=function(){if(opening)return;opening=true;try{baseOpen();$('#riderErrorReportModal')?.setAttribute('aria-hidden','false')}finally{requestAnimationFrame(()=>opening=false)}}})();
+  </script>
+  <script src="./rider_payout_proof_patch.js?v=withdrawal-proof-v1"></script>
+</body>
+</html>
