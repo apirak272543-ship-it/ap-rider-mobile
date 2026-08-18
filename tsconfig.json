@@ -1,4 +1,5 @@
 {
+  "extends": "expo/tsconfig.base",
   "compilerOptions": {"strict": true, "jsx": "react-jsx", "module": "esnext", "moduleResolution": "bundler", "skipLibCheck": true},
   "include": ["**/*.ts", "**/*.tsx"]
 }

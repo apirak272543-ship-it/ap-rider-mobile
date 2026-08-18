@@ -7,7 +7,7 @@ import { DEFAULT_NOTIFICATION_PREFERENCES, loadNotificationPreferences, Notifica
 import { notificationToneLabel, notifyNewJob, notifyRiderActionConfirmed, notifyRiderJobAccepted, playRiderNotificationPreview, setupRiderNotifications } from "./src/notifications";
 import { applyOtaUpdate, downloadOtaUpdate, OtaResult } from "./src/ota";
 
-const CONSOLE_URL = "https://apirak272543-ship-it.github.io/Apservice-/rider.html";
+const CONSOLE_URL = "https://apirak272543-ship-it.github.io/ap-rider-mobile/rider/";
 const SESSION_STORAGE_KEY = "apcx_rider_supabase_session";
 const TONES: NotificationTone[] = ["ap_chime", "ap_urgent", "ap_priority"];
 
