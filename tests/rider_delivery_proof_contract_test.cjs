@@ -1,0 +1,17 @@
+const fs = require('fs');
+const assert = require('assert');
+
+const page = fs.readFileSync('rider/delivery.html', 'utf8');
+const app = fs.readFileSync('rider/rider-app.js', 'utf8');
+const media = fs.readFileSync('shared/ap-service-media.js', 'utf8');
+
+assert.match(page, /ap-service-media\.js/, 'Rider delivery route ต้องโหลด Shared Media Service');
+assert.match(app, /proofLibrary/, 'Rider ต้องเลือกหลักฐานจากคลังได้');
+assert.match(app, /proofCamera/, 'Rider ต้องถ่ายหลักฐานจากกล้องได้');
+assert.match(app, /uploadPrivateImage/, 'Rider proof ต้องใช้ private upload API');
+assert.match(app, /bucket: 'delivery-proofs'/, 'Rider proof ต้องเก็บใน private bucket ที่ถูกต้อง');
+assert.match(app, /proof_image: proofRef/, 'Rider proof ต้องบันทึก reference ระยะยาว ไม่บันทึก signed URL ที่หมดอายุ');
+assert.match(media, /createSignedImageUrl/, 'Shared Media ต้องสร้าง signed URL เพื่อตรวจ private upload');
+assert.match(media, /storageRef/, 'Shared Media ต้องคืน private storage reference');
+
+console.log('rider delivery proof contract: PASS');
