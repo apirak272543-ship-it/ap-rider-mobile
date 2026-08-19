@@ -4,6 +4,7 @@
   const C = window.APServiceCore;
   const $ = selector => document.querySelector(selector);
   const h = M.ui.escapeHtml;
+  if (!document.getElementById('rider-modern-theme-style')) document.head.insertAdjacentHTML('beforeend', '<link id="rider-modern-theme-style" rel="stylesheet" href="rider-modern-theme.css?v=rider-soft-art-v1">');
   const page = document.body.dataset.page;
   const params = new URLSearchParams(location.search);
   const pageScope = name => { const scope = M.network.createScope(name); addEventListener('pagehide', () => scope.dispose(), { once: true }); return scope; };

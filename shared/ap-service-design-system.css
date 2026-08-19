@@ -1,0 +1,28 @@
+/* Shared, additive soft-art primitives. App-specific colors remain in each app theme. */
+:root {
+  --soft-radius-sm: 14px;
+  --soft-radius: 20px;
+  --soft-radius-lg: 28px;
+  --soft-shadow: 0 14px 34px rgba(16, 37, 36, .09);
+  --soft-shadow-hover: 0 20px 42px rgba(16, 37, 36, .14);
+  --soft-ease: 180ms cubic-bezier(.2, .75, .25, 1);
+}
+
+html { scroll-behavior: smooth; }
+body { min-height: 100dvh; letter-spacing: -.01em; }
+.mpa-shell { padding-top: 28px; }
+.mpa-card,.mpa-order-group,.mpa-menu-group { border-radius: var(--soft-radius); box-shadow: var(--soft-shadow); }
+.mpa-button { min-height: 42px; border-radius: 999px; box-shadow: 0 7px 15px color-mix(in srgb, var(--ap-brand) 22%, transparent); transition: transform var(--soft-ease), box-shadow var(--soft-ease), filter var(--soft-ease); }
+.mpa-button:hover { transform: translateY(-2px); box-shadow: 0 12px 22px color-mix(in srgb, var(--ap-brand) 28%, transparent); filter: saturate(1.06); }
+.mpa-button:active { transform: translateY(0) scale(.98); }
+.mpa-button-secondary { box-shadow: none; }
+.mpa-field input,.mpa-field select,.mpa-field textarea { min-height: 44px; border-radius: var(--soft-radius-sm); transition: border-color var(--soft-ease), box-shadow var(--soft-ease), background var(--soft-ease); }
+.mpa-field input:focus,.mpa-field select:focus,.mpa-field textarea:focus { box-shadow: 0 0 0 4px color-mix(in srgb, var(--ap-brand) 13%, transparent); }
+.mpa-badge { padding: 5px 9px; border-radius: 999px; }
+.mpa-table-wrap { border-radius: var(--soft-radius); box-shadow: 0 8px 20px rgba(16, 37, 36, .04); }
+.mpa-table th { letter-spacing: .035em; }
+.mpa-state { border-radius: var(--soft-radius); background: color-mix(in srgb, var(--ap-paper) 78%, var(--ap-brand-soft)); }
+@media (max-width: 760px) {
+  .mpa-shell { padding-top: 18px; }
+  .mpa-button { min-height: 40px; }
+}
