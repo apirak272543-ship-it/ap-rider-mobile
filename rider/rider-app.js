@@ -21,7 +21,7 @@
 
   async function gate(active, content) {
     app(active, content);
-    const access = await M.auth.requireRole('rider', { loginUrl: 'login.html', container: $('[data-page-content]') });
+    const access = await M.auth.requireRole('rider', { loginUrl: 'login.html', container: $('[data-page-content]'), renderLoading: false });
     if (!access) return null;
     const controls = await M.request(`account_controls?select=status,suspension_reason,feature_overrides&user_id=eq.${encodeURIComponent(access.user.id)}&limit=1`, { private: true, cacheTtlMs: 10_000, cacheKey: `rider-account-control:${access.user.id}` });
     const control = controls?.[0] || { status: 'active', feature_overrides: {} };
