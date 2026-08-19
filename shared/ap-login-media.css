@@ -1,0 +1,6 @@
+/* AP Login Media — background-only layer; form/card remains in normal document flow. */
+[data-login-media-layer] { position: fixed; inset: 0; z-index: -1; pointer-events: none; background-position: center; background-size: cover; background-repeat: no-repeat; opacity: var(--login-media-opacity, .18); filter: saturate(.9); }
+[data-login-media-layer]::after { content: ''; position: absolute; inset: 0; background: linear-gradient(135deg, rgba(255,255,255,.86), rgba(255,255,255,.52)); }
+.has-login-media body { isolation: isolate; }
+@media (prefers-reduced-motion: reduce) { [data-login-media-layer][data-media-kind="animated_gif"] { background-image: none !important; background-color: #f5f7fb; opacity: 1; } }
+@media (max-width: 640px) { [data-login-media-layer]::after { background: linear-gradient(180deg, rgba(255,255,255,.9), rgba(255,255,255,.62)); } }
