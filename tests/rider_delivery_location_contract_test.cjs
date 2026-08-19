@@ -14,6 +14,8 @@ assert.match(location, /distanceMeters/, 'ต้องคำนวณระย�
 assert.match(location, /50/, 'ต้องคง legacy threshold reference ที่ 50 เมตร');
 assert.match(location, /Google Maps/, 'ต้องมี destination map link');
 assert.match(location, /OpenStreetMap/, 'ต้องมี destination map fallback');
+assert.match(location, /maps\/dir/, 'ต้องมี fallback เปิดเส้นทางครบจุดรับและจุดส่ง');
+assert.match(location, /เปิดเส้นทางจุดรับ → จุดส่ง/, 'Rider ต้องเปิดเส้นทางเดียวจากจุดรับไปจุดส่งได้');
 assert.match(location, /riderManualLat/, 'ต้องมี manual coordinate fallback สำหรับ route reference');
 assert.doesNotMatch(location, /delivery_location\s*:/, 'Rider UI ต้องไม่เขียนทับพิกัดปลายทางของลูกค้า');
 assert.doesNotMatch(location, /method:\s*['"]PATCH/, 'Rider GPS/map helper ต้องไม่แก้ status หรือข้อมูลออร์เดอร์โดยตรง');
