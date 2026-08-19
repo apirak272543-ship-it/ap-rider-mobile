@@ -167,14 +167,70 @@
   }
 
   async function earnings() {
-    const ctx = await gate('earnings', `<div class="mpa-page-head"><div><h1>รายได้และกระเป๋าเงิน</h1><p>แสดงเฉพาะรายได้ที่ระบบบันทึกให้บัญชีไรเดอร์ที่ล็อกอิน</p></div></div><section id="list" class="mpa-card">${M.ui.loading('กำลังโหลดรายได้…')}</section>`);
+    const ctx = await gate('earnings', `<div class="mpa-page-head"><div><h1>รายได้และกระเป๋าเงิน</h1><p>แสดงเฉพาะรายได้และยอดถอนของบัญชีไรเดอร์ที่ล็อกอิน</p></div></div><section id="wallet" class="mpa-card rider-wallet-workspace">${M.ui.loading('กำลังโหลดกระเป๋าเงิน…')}</section><section id="list" class="mpa-card">${M.ui.loading('กำลังโหลดรายได้…')}</section>`);
     if (!ctx) return;
     const scope = pageScope('rider:earnings');
     const path = `rider_earnings?select=order_id,rider_id,delivery_fee,rider_share,platform_share,settlement_status,completed_at,delivery_orders(id,store_name,customer_name,service_type,payable)&rider_id=eq.${encodeURIComponent(ctx.rider.id)}&order=completed_at.desc&limit=150`;
-    let statusFilter = 'all'; let lastDataSignature = ''; let lastRenderSignature = '';
+    const walletPath = 'rpc/wallet_summary';
+    const withdrawalPath = `withdrawal_requests?select=id,amount,status,recipient_note,admin_note,payment_reference,requested_at,reviewed_at,paid_at,proof_available,proof_image_url&rider_id=eq.${encodeURIComponent(ctx.rider.id)}&order=requested_at.desc&limit=60`;
+    let statusFilter = 'all'; let lastDataSignature = ''; let lastRenderSignature = ''; let lastWalletSignature = '';
     const formatMoney = value => Number.isFinite(Number(value)) ? `฿${Number(value).toLocaleString('th-TH', { minimumFractionDigits: 0, maximumFractionDigits: 2 })}` : 'ข้อมูลยอดไม่พร้อม';
     const formatTime = value => { const date = new Date(value); return Number.isNaN(date.getTime()) ? 'ไม่ระบุเวลาปิดงาน' : new Intl.DateTimeFormat('th-TH', { dateStyle: 'medium', timeStyle: 'short' }).format(date); };
     const normalizedStatus = value => String(value || '').toLowerCase() === 'settled' ? 'settled' : String(value || '').toLowerCase() === 'reversed' ? 'reversed' : 'unknown';
+    const withdrawalStatusLabel = value => ({ requested: 'รอตรวจสอบ', approved: 'อนุมัติแล้ว', paid: 'โอนแล้ว', rejected: 'ไม่อนุมัติ', cancelled: 'ยกเลิก' }[String(value || '').toLowerCase()] || 'รอสถานะ');
+    const privateProofPath = value => String(value || '').split('/').map(encodeURIComponent).join('/');
+
+    const openProof = async (id, fallbackProof) => {
+      try {
+        const row = (await M.request(`withdrawal_requests?select=id,proof_image_url,proof_available&id=eq.${encodeURIComponent(id)}&limit=1`, { private: true, forceFresh: true, cacheKey: `withdrawal-proof:${id}` }))?.[0];
+        const proof = row?.proof_image_url || fallbackProof;
+        if (!proof || !row?.proof_available) throw new Error('ยังไม่มีหลักฐานการโอนสำหรับคำขอนี้');
+        if (/^data:image\//i.test(proof)) {
+          const legacyViewer = window.open(proof, '_blank', 'noopener');
+          if (!legacyViewer) throw new Error('เบราว์เซอร์บล็อกหน้าต่างรูปภาพ กรุณาอนุญาต pop-up แล้วลองอีกครั้ง');
+          return;
+        }
+        const session = M.auth.getSession();
+        const response = await fetch(`${M.config.url}/storage/v1/object/${privateProofPath(proof)}`, { headers: { apikey: M.config.publishableKey, Authorization: `Bearer ${session?.access_token || ''}` } });
+        if (!response.ok) throw new Error('ไม่สามารถเปิดหลักฐานการโอนได้');
+        const viewerUrl = URL.createObjectURL(await response.blob());
+        const viewer = window.open(viewerUrl, '_blank', 'noopener');
+        if (!viewer) throw new Error('เบราว์เซอร์บล็อกหน้าต่างรูปภาพ กรุณาอนุญาต pop-up แล้วลองอีกครั้ง');
+        setTimeout(() => URL.revokeObjectURL(viewerUrl), 60_000);
+      } catch (error) { M.ui.setNotice(error.message || 'เปิดหลักฐานการโอนไม่สำเร็จ', 'error'); }
+    };
+
+    const renderWallet = (wallet, withdrawals) => {
+      const safeWallet = wallet || {};
+      const safeWithdrawals = Array.isArray(withdrawals) ? withdrawals : [];
+      const available = Number(safeWallet.available_amount || 0);
+      const requests = safeWithdrawals.length ? `<div class="rider-withdrawal-list"><div class="rider-wallet-section-head"><h3>คำขอถอนล่าสุด</h3><p class="mpa-muted">สถานะและหลักฐานการโอนมาจากคำขอจริงของบัญชีนี้</p></div>${safeWithdrawals.slice(0, 8).map(row => `<article class="rider-withdrawal-card"><div><p class="rider-eyebrow">คำขอเมื่อ ${h(formatTime(row.requested_at))}</p><strong>${h(formatMoney(row.amount))}</strong><p class="mpa-muted">${h(withdrawalStatusLabel(row.status))}${row.payment_reference ? ` · อ้างอิง ${h(row.payment_reference)}` : ''}${row.admin_note ? ` · ${h(row.admin_note)}` : ''}</p></div><div class="rider-withdrawal-card__action"><span class="mpa-badge rider-withdrawal-status-${h(String(row.status || 'unknown').toLowerCase())}">${h(withdrawalStatusLabel(row.status))}</span>${row.status === 'paid' && row.proof_available ? `<button class="mpa-button mpa-button-secondary rider-proof-button" type="button" data-view-proof="${h(row.id)}" data-proof-ref="${h(row.proof_image_url || '')}">ดูหลักฐานการโอน</button>` : ''}</div></article>`).join('')}</div>` : `<div class="rider-wallet-empty"><strong>ยังไม่มีคำขอถอนเงิน</strong><p class="mpa-muted">เมื่อมียอดพร้อมถอน ระบบจะส่งคำขอเต็มยอดที่พร้อมถอนได้ครั้งละหนึ่งคำขอ</p></div>`;
+      $('#wallet').innerHTML = `<div class="rider-wallet-workspace__head"><div><p class="rider-eyebrow">กระเป๋าเงินไรเดอร์</p><h2>ยอดเงินและการถอน</h2><p class="mpa-muted">ยอดทั้งหมดคำนวณโดย Supabase จากงานที่ปิดแล้วและคำขอถอนจริง ไม่มีตัวเลขจำลอง</p></div></div><div class="rider-wallet-grid"><article class="rider-wallet-stat rider-wallet-stat--available"><small>พร้อมถอน</small><strong>${h(formatMoney(safeWallet.available_amount))}</strong><span>ยอดที่ยังไม่ถูกผูกกับรอบจ่าย</span></article><article class="rider-wallet-stat"><small>กำลังดำเนินการ</small><strong>${h(formatMoney(safeWallet.processing_amount))}</strong><span>คำขอที่รอตรวจหรืออนุมัติ</span></article><article class="rider-wallet-stat"><small>รับเงินจริงแล้ว</small><strong>${h(formatMoney(safeWallet.paid_amount))}</strong><span>ยอดที่ผู้ดูแลบันทึกว่าโอนแล้ว</span></article><article class="rider-wallet-stat"><small>รายได้สะสมทั้งหมด</small><strong>${h(formatMoney(safeWallet.total_earned))}</strong><span>รวมยอดในกระเป๋าทุกสถานะ</span></article></div><form id="withdrawalForm" class="rider-withdrawal-form"><div><h3>ขอถอนยอดพร้อมถอน</h3><p class="mpa-muted">ระบบจะส่งคำขอเฉพาะยอด <strong>${h(formatMoney(available))}</strong> ที่พร้อมถอน ณ ขณะนี้ และป้องกันการส่งคำขอซ้ำระหว่างรอตรวจ</p></div><label class="mpa-field"><span>หมายเหตุสำหรับผู้ดูแล (ไม่บังคับ)</span><textarea id="withdrawalNote" maxlength="500" rows="2" placeholder="เช่น ช่องทางรับเงินหรือหมายเหตุที่ต้องการแจ้ง"></textarea></label><button id="requestWithdrawal" class="mpa-button" type="submit" ${available > 0 ? '' : 'disabled'}>ส่งคำขอถอนยอดพร้อมถอน</button></form>${requests}`;
+      $('#withdrawalForm')?.addEventListener('submit', async event => {
+        event.preventDefault();
+        const button = $('#requestWithdrawal');
+        if (!button || button.disabled) return;
+        button.disabled = true;
+        try {
+          await M.request('rpc/request_full_wallet_withdrawal', { method: 'POST', private: true, body: JSON.stringify({ p_recipient_type: 'rider', p_recipient_id: ctx.rider.id, p_recipient_note: $('#withdrawalNote')?.value.trim() || '' }) });
+          M.ui.setNotice('ส่งคำขอถอนเงินแล้ว ผู้ดูแลจะตรวจสอบตามลำดับ');
+          await loadWallet(true);
+        } catch (error) { M.ui.setNotice(error.message || 'ส่งคำขอถอนเงินไม่สำเร็จ', 'error'); button.disabled = false; }
+      });
+      document.querySelectorAll('[data-view-proof]').forEach(button => button.addEventListener('click', () => openProof(button.dataset.viewProof, button.dataset.proofRef)));
+    };
+
+    const loadWallet = async forceFresh => {
+      try {
+        const [walletRows, withdrawals] = await Promise.all([
+          M.request(walletPath, { method: 'POST', private: true, body: JSON.stringify({ p_recipient_type: 'rider', p_recipient_id: ctx.rider.id }), cacheTtlMs: 10_000, forceFresh, cacheKey: `rider-wallet:${ctx.rider.id}` }),
+          M.request(withdrawalPath, { private: true, cacheTtlMs: 10_000, forceFresh, cacheKey: `rider-withdrawals:${ctx.rider.id}` })
+        ]);
+        const wallet = Array.isArray(walletRows) ? walletRows[0] : walletRows || {};
+        lastWalletSignature = JSON.stringify([wallet, withdrawals || []]);
+        renderWallet(wallet, withdrawals);
+      } catch (error) { $('#wallet').innerHTML = M.ui.error('โหลดกระเป๋าเงินไม่สำเร็จ', error.message); }
+    };
     const render = rows => {
       const safeRows = Array.isArray(rows) ? rows : [];
       const dataSignature = JSON.stringify(safeRows.map(row => [row.order_id, row.rider_share, row.delivery_fee, row.settlement_status, row.completed_at]));
@@ -192,8 +248,10 @@
       $('#earningsFilter').addEventListener('change', event => { statusFilter = event.target.value; render(safeRows); });
     };
     const read = forceFresh => scope.request(path, { private: true, cacheTtlMs: 10_000, forceFresh, cacheKey: `rider-earnings:${ctx.rider.id}` });
-    try { render(await read(false)); } catch (err) { if (err.code !== M.network.STALE_RESPONSE) $('#list').innerHTML = M.ui.error('โหลดรายได้ไม่สำเร็จ', err.message); return; }
-    const stop = M.network.startBackgroundSync({ key: `rider-earnings:${ctx.rider.id}`, intervalMs: 30_000, task: async () => { const rows = await read(true); const signature = JSON.stringify((rows || []).map(row => [row.order_id, row.rider_share, row.delivery_fee, row.settlement_status, row.completed_at])); return { changed: signature !== lastDataSignature, data: rows || [] }; }, onData: render, onError: error => M.ui.setNotice(`อัปเดตรายได้ไม่สำเร็จ: ${error.message}`, 'error') }); addEventListener('pagehide', stop, { once: true });
+    try { const [rows] = await Promise.all([read(false), loadWallet(false)]); render(rows); } catch (err) { if (err.code !== M.network.STALE_RESPONSE) $('#list').innerHTML = M.ui.error('โหลดรายได้ไม่สำเร็จ', err.message); return; }
+    const stopEarnings = M.network.startBackgroundSync({ key: `rider-earnings:${ctx.rider.id}`, intervalMs: 30_000, task: async () => { const rows = await read(true); const signature = JSON.stringify((rows || []).map(row => [row.order_id, row.rider_share, row.delivery_fee, row.settlement_status, row.completed_at])); return { changed: signature !== lastDataSignature, data: rows || [] }; }, onData: render, onError: error => M.ui.setNotice(`อัปเดตรายได้ไม่สำเร็จ: ${error.message}`, 'error') });
+    const stopWallet = M.network.startBackgroundSync({ key: `rider-wallet:${ctx.rider.id}`, intervalMs: 60_000, task: async () => { const [walletRows, withdrawals] = await Promise.all([M.request(walletPath, { method: 'POST', private: true, body: JSON.stringify({ p_recipient_type: 'rider', p_recipient_id: ctx.rider.id }), forceFresh: true, cacheKey: `rider-wallet:${ctx.rider.id}` }), M.request(withdrawalPath, { private: true, forceFresh: true, cacheKey: `rider-withdrawals:${ctx.rider.id}` })]); const wallet = Array.isArray(walletRows) ? walletRows[0] : walletRows || {}; const signature = JSON.stringify([wallet, withdrawals || []]); return { changed: signature !== lastWalletSignature, data: { wallet, withdrawals } }; }, onData: data => { lastWalletSignature = JSON.stringify([data.wallet, data.withdrawals || []]); renderWallet(data.wallet, data.withdrawals); }, onError: error => M.ui.setNotice(`อัปเดตกระเป๋าเงินไม่สำเร็จ: ${error.message}`, 'error') });
+    addEventListener('pagehide', () => { stopEarnings(); stopWallet(); }, { once: true });
   }
 
   async function profile() {

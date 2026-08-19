@@ -16,7 +16,7 @@ assert.match(app, /ข้อมูลยอดไม่พร้อม/, 'Earnin
 assert.doesNotMatch(app, /JSON\.stringify\(rows, null, 2\)/, 'Earnings ต้องไม่แสดง raw JSON');
 assert.match(app, /rider-earnings:\$\{ctx\.rider\.id\}/, 'Earnings background refresh ต้องมี cache key แยกตามไรเดอร์');
 assert.match(jobs, /rider-app\.js\?v=rider-ui-v2/, 'Jobs route ต้อง cache-bust application asset ใหม่');
-assert.match(earnings, /rider-app\.js\?v=rider-ui-v2/, 'Earnings route ต้อง cache-bust application asset ใหม่');
+assert.match(earnings, /rider-app\.js\?v=rider-finance-v1/, 'Earnings route ต้อง cache-bust application asset เวอร์ชัน Finance ใหม่');
 assert.match(delivery, /ap-service-media\.js\?v=shared-media-v5/, 'Delivery route ต้อง cache-bust media asset ใหม่');
 
 console.log('rider jobs and earnings contract: PASS');
