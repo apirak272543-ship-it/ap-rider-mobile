@@ -16,9 +16,25 @@
   };
 
   async function ownRider(user) {
-    const rows = await M.request(`riders?select=id,name,phone,vehicle,status,user_id&user_id=eq.${encodeURIComponent(user.id)}&limit=1`, { private: true, cacheTtlMs: 10_000, cacheKey: `rider-profile:${user.id}` });
+    const rows = await M.request(`riders?select=id,name,phone,vehicle,status,user_id,last_location,ride_available,compliance_status&user_id=eq.${encodeURIComponent(user.id)}&limit=1`, { private: true, cacheTtlMs: 10_000, cacheKey: `rider-profile:${user.id}` });
     return rows?.[0] || null;
   }
+
+  async function updateRiderPresence(operation, data) {
+    const session = await M.auth.refreshSession(false);
+    if (!session?.access_token) throw new Error('เซสชัน Rider หมดอายุ กรุณาเข้าสู่ระบบใหม่');
+    const response = await fetch(`${M.config.url}/functions/v1/role-access`, { method: 'POST', headers: { apikey: M.config.publishableKey, Authorization: `Bearer ${session.access_token}`, 'Content-Type': 'application/json' }, body: JSON.stringify({ action: 'update_rider_presence', operation, data }) });
+    const result = await response.json().catch(() => null);
+    if (!response.ok) throw new Error(result?.error || 'ไม่สามารถบันทึกข้อมูล Rider ได้');
+    return result?.rider || null;
+  }
+
+  const riderLocationLabel = location => {
+    const lat = Number(location?.lat), lng = Number(location?.lng);
+    if (!Number.isFinite(lat) || !Number.isFinite(lng)) return 'ยังไม่ได้ส่งพิกัดจากอุปกรณ์';
+    const captured = location?.captured_at ? new Date(location.captured_at).toLocaleString('th-TH') : 'ไม่ระบุเวลา';
+    return `${lat.toFixed(6)}, ${lng.toFixed(6)} · ${captured}`;
+  };
 
   async function gate(active, content) {
     app(active, content);
@@ -257,15 +273,33 @@
   }
 
   async function profile() {
-    const ctx = await gate('profile', `<div class="mpa-page-head"><div><h1>โปรไฟล์ไรเดอร์</h1><p>ตั้งค่าสถานะพร้อมรับงานของบัญชีนี้</p></div></div><section id="form" class="mpa-card">${M.ui.loading()}</section>`);
+    const ctx = await gate('profile', `<div class="mpa-page-head"><div><h1>โปรไฟล์และสถานะ Rider</h1><p>แก้ไขข้อมูลพื้นฐาน ส่งพิกัดสด และตั้งค่าสถานะพร้อมรับงานผ่านการยืนยันสิทธิ์ฝั่ง server</p></div></div><section id="form" class="mpa-card">${M.ui.loading()}</section>`);
     if (!ctx) return;
-    $('#form').innerHTML = `<form id="save" style="max-width:520px"><div class="mpa-field"><label>ชื่อ</label><input id="name" value="${h(ctx.rider.name)}" required></div><div class="mpa-field"><label>โทรศัพท์</label><input id="phone" value="${h(ctx.rider.phone || '')}"></div><div class="mpa-field"><label>สถานะ</label><select id="status"><option ${ctx.rider.status === 'พร้อมรับงาน' ? 'selected' : ''}>พร้อมรับงาน</option><option ${ctx.rider.status === 'ไม่พร้อมรับงาน' ? 'selected' : ''}>ไม่พร้อมรับงาน</option></select></div><button class="mpa-button">บันทึกโปรไฟล์</button></form>`;
+    $('#form').innerHTML = `<div style="display:grid;gap:18px;max-width:620px"><form id="save"><h2 style="margin:0 0 10px">ข้อมูลพื้นฐาน</h2><div class="mpa-field"><label>ชื่อ</label><input id="name" value="${h(ctx.rider.name)}" required></div><div class="mpa-field"><label>โทรศัพท์</label><input id="phone" inputmode="tel" value="${h(ctx.rider.phone || '')}"></div><div class="mpa-field"><label>ยานพาหนะ</label><input id="vehicle" value="${h(ctx.rider.vehicle || '')}" placeholder="เช่น รถจักรยานยนต์"></div><button class="mpa-button">บันทึกข้อมูลพื้นฐาน</button></form><section style="padding-top:16px;border-top:1px solid var(--ap-line)"><h2 style="margin:0 0 10px">สถานะพร้อมรับงาน</h2><p class="mpa-muted">สถานะพร้อมรับงานจะเปิดได้เฉพาะ Rider ที่ผ่านการอนุมัติจากผู้ดูแลแล้ว</p><div class="mpa-field"><label>สถานะ</label><select id="availability"><option value="true" ${(ctx.rider.ride_available || ctx.rider.status === 'พร้อมรับงาน') ? 'selected' : ''}>พร้อมรับงาน</option><option value="false" ${(!ctx.rider.ride_available && ctx.rider.status !== 'พร้อมรับงาน') ? 'selected' : ''}>ไม่พร้อมรับงาน</option></select></div><button type="button" id="saveAvailability" class="mpa-button mpa-button-secondary">บันทึกสถานะพร้อมรับงาน</button></section><section style="padding-top:16px;border-top:1px solid var(--ap-line)"><h2 style="margin:0 0 10px">ตำแหน่งล่าสุด</h2><p id="riderPresenceLocation" class="mpa-muted">${h(riderLocationLabel(ctx.rider.last_location))}</p><p id="riderPresenceStatus" class="mpa-muted" aria-live="polite">กดปุ่มเพื่อส่งพิกัดปัจจุบันจากอุปกรณ์ของคุณ</p><button type="button" id="captureRiderLocation" class="mpa-button mpa-button-secondary">ส่งพิกัดปัจจุบัน</button></section></div>`;
     $('#save').onsubmit = async event => {
       event.preventDefault();
+      const button = $('#save'); button.disabled = true;
       try {
-        await M.request(`riders?id=eq.${encodeURIComponent(ctx.rider.id)}`, { method: 'PATCH', private: true, headers: { Prefer: 'return=minimal' }, body: JSON.stringify({ name: $('#name').value.trim(), phone: $('#phone').value.trim(), status: $('#status').value, updated_at: M.ui.nowIso() }) });
+        const rider = await updateRiderPresence('profile', { name: $('#name').value.trim(), phone: $('#phone').value.trim(), vehicle: $('#vehicle').value.trim() });
+        Object.assign(ctx.rider, rider || {});
         M.ui.setNotice('บันทึกโปรไฟล์แล้ว');
-      } catch (err) { M.ui.setNotice(err.message, 'error'); }
+      } catch (err) { M.ui.setNotice(err.message, 'error'); } finally { button.disabled = false; }
+    };
+    $('#saveAvailability').onclick = async () => {
+      const button = $('#saveAvailability'); button.disabled = true;
+      try { const rider = await updateRiderPresence('availability', { available: $('#availability').value === 'true' }); Object.assign(ctx.rider, rider || {}); M.ui.setNotice('บันทึกสถานะพร้อมรับงานแล้ว'); }
+      catch (err) { M.ui.setNotice(err.message, 'error'); } finally { button.disabled = false; }
+    };
+    $('#captureRiderLocation').onclick = async () => {
+      const button = $('#captureRiderLocation'), status = $('#riderPresenceStatus');
+      if (!navigator.geolocation) return M.ui.setNotice('อุปกรณ์หรือเบราว์เซอร์นี้ไม่รองรับการระบุตำแหน่งอัตโนมัติ', 'error');
+      button.disabled = true; status.textContent = 'กำลังขอพิกัดจากอุปกรณ์…';
+      try {
+        const position = await new Promise((resolve, reject) => navigator.geolocation.getCurrentPosition(resolve, reject, { enableHighAccuracy: true, timeout: 12000, maximumAge: 60000 }));
+        const rider = await updateRiderPresence('location', { location: { lat: Number(position.coords.latitude), lng: Number(position.coords.longitude), accuracy: Number(position.coords.accuracy), captured_at: M.ui.nowIso() } });
+        Object.assign(ctx.rider, rider || {}); $('#riderPresenceLocation').textContent = riderLocationLabel(ctx.rider.last_location); status.textContent = 'บันทึกพิกัดล่าสุดแล้ว'; M.ui.setNotice('ส่งพิกัดปัจจุบันแล้ว');
+      } catch (err) { status.textContent = err?.code === 1 ? 'ยังไม่ได้อนุญาตตำแหน่ง กรุณาเปิดสิทธิ์ในเบราว์เซอร์แล้วลองใหม่' : 'ยังระบุตำแหน่งไม่ได้ กรุณาตรวจ GPS และสัญญาณแล้วลองใหม่'; M.ui.setNotice(status.textContent, 'error'); }
+      finally { button.disabled = false; }
     };
   }
 

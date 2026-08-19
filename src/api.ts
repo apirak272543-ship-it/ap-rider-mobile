@@ -30,6 +30,7 @@ export async function signIn(identifier: string, password: string) {
 }
 
 export const rest = <T>(path: string, session: Session, init?: RequestInit) => request<T>(`/rest/v1/${path}`, init, session);
+async function roleAccess<T>(session: Session, payload: Record<string, unknown>) { return request<T>("/functions/v1/role-access", { method: "POST", body: JSON.stringify(payload) }, session); }
 export async function ensureRider(session: Session) {
   const roles = await rest<{ role: string }[]>(`user_roles?select=role&user_id=eq.${session.user.id}`, session);
   if (!roles.some((r) => r.role === "rider" || r.role === "admin")) throw new Error("บัญชีนี้ไม่มีสิทธิ์ใช้งาน Rider Application");
@@ -64,8 +65,8 @@ export async function setOrderStatus(session: Session, rider: Rider, order: Orde
 }
 
 export async function fetchEarnings(session: Session, rider: Rider) { return rest<RiderEarning[]>(`rider_earnings?select=order_id,rider_id,delivery_fee,rider_share,platform_share,settlement_status,completed_at,delivery_orders(id,store_name,customer_name,service_type,payable)&rider_id=eq.${encodeURIComponent(rider.id)}&order=completed_at.desc&limit=100`, session); }
-export async function updateRiderLocation(session: Session, rider: Rider, location: LocationPayload) { await rest(`riders?id=eq.${encodeURIComponent(rider.id)}`, session, { method: "PATCH", headers: { Prefer: "return=minimal" }, body: JSON.stringify({ last_location: location, updated_at: new Date().toISOString() }) }); }
-export async function updateRiderStatus(session: Session, rider: Rider, status: string) { await rest(`riders?id=eq.${encodeURIComponent(rider.id)}`, session, { method: "PATCH", headers: { Prefer: "return=minimal" }, body: JSON.stringify({ status }) }); }
+export async function updateRiderLocation(session: Session, _rider: Rider, location: LocationPayload) { await roleAccess(session, { action: "update_rider_presence", operation: "location", data: { location } }); }
+export async function updateRiderStatus(session: Session, _rider: Rider, status: string) { await roleAccess(session, { action: "update_rider_presence", operation: "availability", data: { available: status === "พร้อมรับงาน" } }); }
 export async function registerPushToken(session: Session, token: string, preferences: { tone: "ap_chime" | "ap_urgent" | "ap_priority"; enabled: boolean }) { await rest("mobile_device_tokens?on_conflict=expo_push_token", session, { method: "POST", headers: { Prefer: "resolution=merge-duplicates,return=minimal" }, body: JSON.stringify({ user_id: session.user.id, app_role: "rider", expo_push_token: token, notification_tone: preferences.tone, notifications_enabled: preferences.enabled, updated_at: new Date().toISOString() }) }); }
 export async function disablePushToken(session: Session, token: string) { await rest(`mobile_device_tokens?expo_push_token=eq.${encodeURIComponent(token)}&user_id=eq.${encodeURIComponent(session.user.id)}`, session, { method: "PATCH", headers: { Prefer: "return=minimal" }, body: JSON.stringify({ notifications_enabled: false, updated_at: new Date().toISOString() }) }); }
 async function addEvent(session: Session, orderId: string, status: string, label: string) { await rest("order_status_events", session, { method: "POST", headers: { Prefer: "return=minimal" }, body: JSON.stringify({ order_id: orderId, status, actor_id: session.user.id, actor_label: label }) }); }
