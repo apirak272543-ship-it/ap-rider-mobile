@@ -84,7 +84,7 @@
   const availableOrdersPath = () => `delivery_orders?select=id,status,payable,store_name,pickup_address,delivery_address,customer_name,ordered_at&rider_id=is.null&status=in.(${claimableStatuses.map(status => encodeURIComponent(status)).join(',')})&order=ordered_at.asc&limit=100`;
 
   async function login() {
-    document.body.innerHTML = `<main class="mpa-shell" style="min-height:100vh;display:grid;place-items:center"><section class="mpa-card" style="width:min(430px,100%)"><h1>เข้าสู่ระบบไรเดอร์</h1><p class="mpa-muted">ใช้บัญชีไรเดอร์ที่ได้รับสิทธิ์ใน AP Service</p><form id="login"><div class="mpa-field"><label>อีเมล</label><input id="email" type="email" required></div><div class="mpa-field"><label>รหัสผ่าน</label><input id="password" type="password" required></div><button class="mpa-button" style="width:100%">เข้าสู่ระบบไรเดอร์</button></form><p class="mpa-muted"><a href="../rider.html">เปิด Rider fallback เดิม</a></p></section></main>`;
+    document.body.innerHTML = `<main class="mpa-shell" style="min-height:100vh;display:grid;place-items:center"><section class="mpa-card" style="width:min(430px,100%)"><form id="login"><div class="mpa-field"><input id="email" type="email" autocomplete="email" aria-label="อีเมล" required></div><div class="mpa-field"><input id="password" type="password" autocomplete="current-password" aria-label="รหัสผ่าน" required></div><button class="mpa-button" style="width:100%">เข้าสู่ระบบ</button></form></section></main>`;
     $('#login').onsubmit = async event => {
       event.preventDefault();
       try {
