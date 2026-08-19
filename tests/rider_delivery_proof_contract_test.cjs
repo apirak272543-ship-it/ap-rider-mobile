@@ -13,5 +13,9 @@ assert.match(app, /bucket: 'delivery-proofs'/, 'Rider proof ต้องเก�
 assert.match(app, /proof_image: proofRef/, 'Rider proof ต้องบันทึก reference ระยะยาว ไม่บันทึก signed URL ที่หมดอายุ');
 assert.match(media, /createSignedImageUrl/, 'Shared Media ต้องสร้าง signed URL เพื่อตรวจ private upload');
 assert.match(media, /storageRef/, 'Shared Media ต้องคืน private storage reference');
+assert.match(media, /DEFAULT_MAX_DIMENSION = 1200/, 'Rider media ต้องจำกัดขนาดรูปสูงสุดที่ 1200px');
+assert.match(media, /DELIVERY_PROOF: Object\.freeze\(\{ maxDimension: 1200/, 'Rider proof ต้องใช้ media profile 1200px');
+assert.match(media, /let quality = 0\.82/, 'Rider media ต้องเริ่มบีบอัดที่ JPEG quality 0.82');
+assert.match(media, /const type = 'image\/jpeg'/, 'Rider media ต้องเข้ารหัส output เป็น JPEG เสมอ');
 
 console.log('rider delivery proof contract: PASS');

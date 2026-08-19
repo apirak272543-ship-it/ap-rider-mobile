@@ -4,15 +4,15 @@
   const root = typeof window !== 'undefined' ? window : globalThis;
   const SOURCE_IMAGE_MAX_BYTES = 40_000_000;
   const DEFAULT_OUTPUT_MAX_BYTES = 1_000_000;
-  const DEFAULT_MAX_DIMENSION = 1600;
+  const DEFAULT_MAX_DIMENSION = 1200;
   const ACCEPTED_IMAGE_TYPES = Object.freeze(['image/jpeg', 'image/png', 'image/webp']);
   const MEDIA_PROFILES = Object.freeze({
     STORE_LOGO: Object.freeze({ maxDimension: 200, maxOutputBytes: 350_000, square: true }), USER_AVATAR: Object.freeze({ maxDimension: 200, maxOutputBytes: 350_000, square: true }), RIDER_AVATAR: Object.freeze({ maxDimension: 200, maxOutputBytes: 350_000, square: true }),
-    PRODUCT_IMAGE: Object.freeze({ maxDimension: 1280, maxOutputBytes: DEFAULT_OUTPUT_MAX_BYTES }), STORE_BACKGROUND: Object.freeze({ maxDimension: 1600, maxOutputBytes: DEFAULT_OUTPUT_MAX_BYTES }),
-    BANNER: Object.freeze({ maxDimension: 1600, maxOutputBytes: DEFAULT_OUTPUT_MAX_BYTES }), ADVERTISEMENT: Object.freeze({ maxDimension: 1600, maxOutputBytes: DEFAULT_OUTPUT_MAX_BYTES }), PROMOTION: Object.freeze({ maxDimension: 1600, maxOutputBytes: DEFAULT_OUTPUT_MAX_BYTES }),
-    PAYMENT_SLIP: Object.freeze({ maxDimension: 1600, maxOutputBytes: DEFAULT_OUTPUT_MAX_BYTES }), DELIVERY_PROOF: Object.freeze({ maxDimension: 1600, maxOutputBytes: DEFAULT_OUTPUT_MAX_BYTES }),
-    IDENTITY_DOCUMENT: Object.freeze({ maxDimension: 1600, maxOutputBytes: DEFAULT_OUTPUT_MAX_BYTES }), LICENSE: Object.freeze({ maxDimension: 1600, maxOutputBytes: DEFAULT_OUTPUT_MAX_BYTES }), VEHICLE_REGISTRATION: Object.freeze({ maxDimension: 1600, maxOutputBytes: DEFAULT_OUTPUT_MAX_BYTES }), INSURANCE: Object.freeze({ maxDimension: 1600, maxOutputBytes: DEFAULT_OUTPUT_MAX_BYTES }),
-    QR_CODE: Object.freeze({ maxDimension: 1200, maxOutputBytes: DEFAULT_OUTPUT_MAX_BYTES, preservePng: true }), ADMIN_MEDIA: Object.freeze({ maxDimension: DEFAULT_MAX_DIMENSION, maxOutputBytes: DEFAULT_OUTPUT_MAX_BYTES }), SYSTEM_MEDIA: Object.freeze({ maxDimension: DEFAULT_MAX_DIMENSION, maxOutputBytes: DEFAULT_OUTPUT_MAX_BYTES }),
+    PRODUCT_IMAGE: Object.freeze({ maxDimension: 1200, maxOutputBytes: DEFAULT_OUTPUT_MAX_BYTES }), STORE_BACKGROUND: Object.freeze({ maxDimension: 1200, maxOutputBytes: DEFAULT_OUTPUT_MAX_BYTES }),
+    BANNER: Object.freeze({ maxDimension: 1200, maxOutputBytes: DEFAULT_OUTPUT_MAX_BYTES }), ADVERTISEMENT: Object.freeze({ maxDimension: 1200, maxOutputBytes: DEFAULT_OUTPUT_MAX_BYTES }), PROMOTION: Object.freeze({ maxDimension: 1200, maxOutputBytes: DEFAULT_OUTPUT_MAX_BYTES }),
+    PAYMENT_SLIP: Object.freeze({ maxDimension: 1200, maxOutputBytes: DEFAULT_OUTPUT_MAX_BYTES }), DELIVERY_PROOF: Object.freeze({ maxDimension: 1200, maxOutputBytes: DEFAULT_OUTPUT_MAX_BYTES }),
+    IDENTITY_DOCUMENT: Object.freeze({ maxDimension: 1200, maxOutputBytes: DEFAULT_OUTPUT_MAX_BYTES }), LICENSE: Object.freeze({ maxDimension: 1200, maxOutputBytes: DEFAULT_OUTPUT_MAX_BYTES }), VEHICLE_REGISTRATION: Object.freeze({ maxDimension: 1200, maxOutputBytes: DEFAULT_OUTPUT_MAX_BYTES }), INSURANCE: Object.freeze({ maxDimension: 1200, maxOutputBytes: DEFAULT_OUTPUT_MAX_BYTES }),
+    QR_CODE: Object.freeze({ maxDimension: 1200, maxOutputBytes: DEFAULT_OUTPUT_MAX_BYTES }), ADMIN_MEDIA: Object.freeze({ maxDimension: DEFAULT_MAX_DIMENSION, maxOutputBytes: DEFAULT_OUTPUT_MAX_BYTES }), SYSTEM_MEDIA: Object.freeze({ maxDimension: DEFAULT_MAX_DIMENSION, maxOutputBytes: DEFAULT_OUTPUT_MAX_BYTES }),
   });
 
   function fail(message) { throw new Error(message); }
@@ -130,7 +130,7 @@
     if (!originalWidth || !originalHeight) fail('รูปภาพไม่มีขนาดที่ใช้งานได้');
 
     let bound = Math.min(Math.max(1, Number(maxDimension) || DEFAULT_MAX_DIMENSION), square ? Math.min(originalWidth, originalHeight) : Math.max(originalWidth, originalHeight));
-    let quality = 0.88;
+    let quality = 0.82;
     for (let attempt = 0; attempt < 12; attempt += 1) {
       progress.update(24 + Math.round((attempt / 12) * 28), 'กำลังบีบอัดรูปภาพ', `กำลังปรับขนาดและคุณภาพให้ไม่เกิน ${Math.round(outputLimit / 1024)} KB`);
       const ratio = Math.min(1, bound / (square ? Math.min(originalWidth, originalHeight) : Math.max(originalWidth, originalHeight)));
@@ -141,7 +141,7 @@
       if (!context) fail('อุปกรณ์นี้ไม่พร้อมสำหรับการบีบอัดรูปภาพ');
       canvas.width = width; canvas.height = height;
       if (square) { const side = Math.min(originalWidth, originalHeight); context.drawImage(image, Math.round((originalWidth - side) / 2), Math.round((originalHeight - side) / 2), side, side, 0, 0, width, height); } else context.drawImage(image, 0, 0, width, height);
-      const type = file.type === 'image/png' && file.size <= outputLimit && ratio === 1 && (preservePng || !square) ? 'image/png' : 'image/webp';
+      const type = 'image/jpeg';
       const blob = await canvasBlob(canvas, type, quality);
       if (blob.size <= outputLimit) {
         progress.update(55, 'เตรียมไฟล์ภาพแล้ว', `ขนาดหลังบีบอัด ${Math.ceil(blob.size / 1024)} KB`);
