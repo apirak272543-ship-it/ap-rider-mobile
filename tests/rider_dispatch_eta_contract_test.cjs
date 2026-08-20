@@ -1,0 +1,13 @@
+const assert = require('node:assert');
+const fs = require('node:fs');
+const path = require('node:path');
+const root = path.resolve(__dirname, '..');
+const app = fs.readFileSync(path.join(root, 'rider/rider-app.js'), 'utf8');
+const css = fs.readFileSync(path.join(root, 'rider/rider-modern-theme.css'), 'utf8');
+assert.match(app, /dispatch_status,estimated_arrival_at,dispatch_note,dispatch_updated_at/, 'Rider order queries must load Dispatch/ETA fields');
+assert.match(app, /rider-job-card__dispatch/, 'Rider Jobs must render Dispatch/ETA summary');
+assert.match(app, /rider-dispatch-panel/, 'Rider Delivery Detail must render Dispatch/ETA panel');
+assert.match(app, /formatEta/, 'Rider UI must render a human-readable ETA');
+assert.match(css, /rider-job-card__dispatch/, 'Rider theme must style Dispatch/ETA summary');
+assert.match(css, /max-width: 430px/, 'Dispatch/ETA layout must collapse for mobile');
+console.log('rider_dispatch_eta_contract_test: PASS');

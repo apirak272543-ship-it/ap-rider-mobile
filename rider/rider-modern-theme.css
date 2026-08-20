@@ -59,6 +59,15 @@ body {
   .mpa-grid.stats .mpa-card,.rider-job-card,.rider-earnings-card,.rider-wallet-card { border-radius:18px; }
   .mpa-table-wrap { border-radius:16px; }
 }
+.rider-job-card__dispatch,.rider-dispatch-panel { position:relative; display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:10px; margin:14px 0; padding:12px; border:1px solid #efd7c1; border-radius:14px; background:rgba(255,250,245,.78); }
+.rider-job-card__dispatch div,.rider-dispatch-panel div { display:grid; gap:4px; min-width:0; }
+.rider-job-card__dispatch span,.rider-dispatch-panel span { font-size:11px; color:#a85b2a; font-weight:700; text-transform:uppercase; letter-spacing:.04em; }
+.rider-job-card__dispatch strong,.rider-dispatch-panel strong { color:#873a12; font-size:13px; line-height:1.35; }
+.rider-job-card__note { margin:10px 0 0; padding:9px 11px; border-left:3px solid #e67b27; border-radius:8px; background:#fff3e6; color:#6e4027; font-size:12px; line-height:1.55; }
+.rider-dispatch-panel { margin:16px 0; }
+@media (max-width: 430px) {
+  .rider-job-card__dispatch,.rider-dispatch-panel { grid-template-columns:1fr; }
+}
 @media (prefers-reduced-motion: reduce) {
   .mpa-nav a,.mpa-card,.rider-job-card,.mpa-button { transition:none; }
 }
