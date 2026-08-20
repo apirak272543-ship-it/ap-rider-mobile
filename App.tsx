@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import { ActivityIndicator, Alert, AppState, BackHandler, Modal, Pressable, SafeAreaView, StatusBar, StyleSheet, Switch, Text, View } from "react-native";
+import * as Location from "expo-location";
 import { WebView } from "react-native-webview";
 
 import { clearSession, countAvailableRiderJobs, disablePushToken, registerPushToken, Session } from "./src/api";
@@ -74,6 +75,7 @@ const riderLogoutBridge = `
 
 export default function App() {
   const webRef = useRef<WebView>(null);
+  const locationPermissionPromptedRef = useRef(false);
   const [canGoBack, setCanGoBack] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
   const [loadError, setLoadError] = useState(false);
@@ -224,6 +226,19 @@ export default function App() {
 
   const pushStatus = pushToken ? "อุปกรณ์นี้พร้อมรับการแจ้งเตือน" : pushIssueRef.current ? "ต้องตรวจสอบสิทธิ์แจ้งเตือน" : "กำลังตรวจสอบการแจ้งเตือน";
 
+  const requestWebLocationPermission = async () => {
+    if (locationPermissionPromptedRef.current) return;
+    try {
+      if (!(await Location.hasServicesEnabledAsync())) return;
+      const current = await Location.getForegroundPermissionsAsync();
+      if (current.granted || !current.canAskAgain) return;
+      locationPermissionPromptedRef.current = true;
+      await Location.requestForegroundPermissionsAsync();
+    } catch {
+      // หน้าเว็บยังแสดงสถานะและปุ่มลองใหม่ของตนเอง หากระบบปฏิบัติการขอสิทธิ์ไม่ได้
+    }
+  };
+
   const handleMessage = (event: { nativeEvent: { data: string } }) => {
     try {
       const payload = JSON.parse(event.nativeEvent.data);
@@ -241,7 +256,7 @@ export default function App() {
   return <SafeAreaView style={styles.page}>
     <StatusBar barStyle="dark-content" backgroundColor="#FFFFFF" />
     <View style={styles.nativeHeader}><View><Text style={styles.brand}>AP Rider</Text><Text style={styles.caption}>Rider Console · ข้อมูลจริงจาก AP Service</Text></View><View style={styles.headerActions}><Pressable accessibilityLabel="รีเฟรชข้อมูลไรเดอร์" style={styles.iconButton} onPress={refreshConsole}><Text style={styles.iconText}>↻</Text></Pressable><Pressable accessibilityLabel="เมนูเพิ่มเติม" style={styles.iconButton} onPress={() => setSecondaryMenuOpen(true)}><Text style={styles.moreIcon}>•••</Text></Pressable></View></View>
-    <View style={styles.webShell}><WebView ref={webRef} source={{ uri: CONSOLE_URL }} originWhitelist={["https://*", "http://*"]} injectedJavaScriptBeforeContentLoaded={sessionBridge} injectedJavaScript={sessionBridge} onMessage={handleMessage} onLoadStart={() => { setIsLoading(true); setLoadError(false); }} onLoadEnd={() => setIsLoading(false)} onError={() => setLoadError(true)} onNavigationStateChange={(state) => setCanGoBack(state.canGoBack)} javaScriptEnabled domStorageEnabled cacheEnabled thirdPartyCookiesEnabled sharedCookiesEnabled pullToRefreshEnabled allowsBackForwardNavigationGestures />{isLoading ? <View style={styles.loadingOverlay}><ActivityIndicator color="#1457D9" /><Text style={styles.loadingText}>กำลังเปิด Rider Console…</Text></View> : null}</View>
+    <View style={styles.webShell}><WebView ref={webRef} source={{ uri: CONSOLE_URL }} originWhitelist={["https://*", "http://*"]} injectedJavaScriptBeforeContentLoaded={sessionBridge} injectedJavaScript={sessionBridge} onMessage={handleMessage} onLoadStart={() => { setIsLoading(true); setLoadError(false); }} onLoadEnd={() => { setIsLoading(false); void requestWebLocationPermission(); }} onError={() => setLoadError(true)} onNavigationStateChange={(state) => setCanGoBack(state.canGoBack)} javaScriptEnabled geolocationEnabled domStorageEnabled cacheEnabled thirdPartyCookiesEnabled sharedCookiesEnabled pullToRefreshEnabled allowsBackForwardNavigationGestures />{isLoading ? <View style={styles.loadingOverlay}><ActivityIndicator color="#1457D9" /><Text style={styles.loadingText}>กำลังเปิด Rider Console…</Text></View> : null}</View>
     <Modal visible={secondaryMenuOpen} animationType="fade" transparent onRequestClose={() => setSecondaryMenuOpen(false)}><View style={styles.modalBackdrop}><Pressable style={StyleSheet.absoluteFillObject} onPress={() => setSecondaryMenuOpen(false)} /><View style={styles.menuSheet}><View style={styles.sheetHeader}><View><Text style={styles.sheetTitle}>เมนูเพิ่มเติม</Text><Text style={styles.sheetSubtitle}>เครื่องมือของ AP Rider</Text></View><Pressable style={styles.closeButton} onPress={() => setSecondaryMenuOpen(false)}><Text style={styles.closeText}>ปิด</Text></Pressable></View><Pressable style={styles.menuItem} onPress={refreshConsole}><View style={styles.menuCopy}><Text style={styles.menuTitle}>รีเฟรชข้อมูล</Text><Text style={styles.menuBody}>ดึงสถานะงานล่าสุดจาก Rider Console</Text></View><Text style={styles.menuArrow}>›</Text></Pressable><Pressable style={styles.menuItem} onPress={openNotificationSettings}><View style={styles.menuCopy}><Text style={styles.menuTitle}>การแจ้งเตือนและเสียง</Text><Text style={styles.menuBody}>{pushStatus}</Text></View><Text style={styles.menuArrow}>›</Text></Pressable><Pressable style={styles.menuItem} disabled={otaLoading} onPress={() => { setSecondaryMenuOpen(false); void checkOta(); }}><View style={styles.menuCopy}><Text style={styles.menuTitle}>ตรวจสอบการอัปเดต</Text><Text style={styles.menuBody}>{otaLoading ? "กำลังตรวจสอบ…" : otaResult?.message || "ค้นหาอัปเดตภายในแอป"}</Text></View><Text style={styles.menuArrow}>›</Text></Pressable><Pressable style={[styles.menuItem, styles.menuItemDanger]} onPress={handleLogout}><View style={styles.menuCopy}><Text style={styles.menuDangerTitle}>ออกจากระบบ</Text><Text style={styles.menuBody}>ล้างบัญชีออกจากอุปกรณ์นี้</Text></View><Text style={styles.menuDangerTitle}>ออก</Text></Pressable></View></View></Modal>
     <Modal visible={settingsOpen} animationType="slide" transparent onRequestClose={() => setSettingsOpen(false)}><View style={styles.modalBackdrop}><View style={styles.sheet}><View style={styles.sheetHeader}><View><Text style={styles.sheetTitle}>การแจ้งเตือน AP Rider</Text><Text style={styles.sheetSubtitle}>คอนโซลยังใช้ข้อมูลและสิทธิ์เดียวกับเว็บไซต์</Text></View><Pressable style={styles.closeButton} onPress={() => setSettingsOpen(false)}><Text style={styles.closeText}>ปิด</Text></Pressable></View><View style={styles.statusCard}><Text style={styles.settingTitle}>สถานะการแจ้งเตือน</Text><Text style={styles.settingBody}>{pushStatus}</Text></View><View style={styles.settingRow}><View style={styles.settingCopy}><Text style={styles.settingTitle}>แจ้งเตือนงานและข้อความใหม่</Text><Text style={styles.settingBody}>เมื่อแอปเปิดอยู่ จะร้องทันทีเมื่อจำนวนงานรอรับใน Rider Console เพิ่มขึ้น</Text></View><Switch value={preferences.enabled} trackColor={{ true: "#1457D9" }} onValueChange={(enabled) => { void updatePreferences({ ...preferences, enabled }); }} /></View><Text style={styles.settingTitle}>เลือกเสียงแจ้งเตือน</Text><View style={styles.toneList}>{TONES.map((tone) => <Pressable key={tone} style={[styles.tone, preferences.tone === tone && styles.toneActive]} onPress={() => { void updatePreferences({ ...preferences, tone }); }}><Text style={[styles.toneText, preferences.tone === tone && styles.toneTextActive]}>{notificationToneLabel(tone)}</Text></Pressable>)}</View><Pressable style={styles.secondaryButton} onPress={() => { void playRiderNotificationPreview(preferences); }}><Text style={styles.secondaryText}>ทดสอบเสียงที่เลือก</Text></Pressable><View style={styles.otaCard}><Text style={styles.settingTitle}>อัปเดตภายในแอป</Text><Text style={styles.settingBody}>ใช้สำหรับแก้ไขหน้าจอและฟังก์ชันที่ไม่เปลี่ยนส่วนระบบ Android</Text>{otaResult ? <Text style={styles.otaText}>{otaResult.message}</Text> : null}<Pressable style={styles.primaryButton} disabled={otaLoading} onPress={() => { void checkOta(); }}><Text style={styles.primaryText}>{otaLoading ? "กำลังตรวจสอบ…" : "ตรวจสอบการอัปเดต"}</Text></Pressable></View></View></View></Modal>
   </SafeAreaView>;
