@@ -149,4 +149,20 @@
   const cart = { key: 'apservice_mpa_cart_v1', read() { try { return JSON.parse(sessionStorage.getItem(this.key) || '[]'); } catch { return []; } }, write(items) { sessionStorage.setItem(this.key, JSON.stringify(items)); root.dispatchEvent(new CustomEvent('apservice:cart')); }, add(item) { const items = this.read(); const index = items.findIndex(row => row.id === item.id && row.storeId === item.storeId); if (index >= 0) items[index].qty += 1; else items.push({ ...item, qty: 1 }); this.write(items); }, clear() { this.write([]); }, total() { return this.read().reduce((sum, row) => sum + Number(row.price || 0) * Number(row.qty || 0), 0); } };
 
   root.APServiceMPA = Object.freeze({ version: 'mpa-runtime-v3', config: { url: SUPABASE_URL, publishableKey: SUPABASE_KEY }, request: lifecycle.request, requestCount: lifecycle.requestCount, network: lifecycle, auth: { getSession, refreshSession, signIn, signUp, signOut, confirmSignOut, currentUser, rolesFor, requireRole }, ui: { escapeHtml, baht, nowIso, loading, error, empty, setNotice }, cart });
+  function installImageSourceChoices() {
+    const isImageInput = input => input?.matches?.('input[type="file"]') && /image\//i.test(String(input.getAttribute('accept') || ''));
+    const existingSourceControl = input => /^(เลือกจากคลัง|ถ่ายรูป|เปลี่ยนจากคลัง|ถ่ายรูปใหม่)/.test(String(input.closest('label')?.textContent || '').replace(/\s+/g, ' ').trim()) || Boolean(input.closest('[data-image-source-choices]'));
+    const enhance = input => {
+      if (!isImageInput(input) || input.dataset.imageSourceChoices === 'true' || existingSourceControl(input)) return;
+      input.dataset.imageSourceChoices = 'true'; input.hidden = true; input.tabIndex = -1;
+      const controls = document.createElement('span'); controls.dataset.imageSourceChoices = 'true'; controls.style.cssText = 'display:inline-flex;gap:8px;flex-wrap:wrap;vertical-align:middle';
+      const choose = (label, camera) => { const button = document.createElement('button'); button.type = 'button'; button.className = 'mpa-button mpa-button-secondary'; button.textContent = label; button.addEventListener('click', () => { if (camera) input.setAttribute('capture', 'environment'); else input.removeAttribute('capture'); input.click(); }); return button; };
+      controls.append(choose('เลือกจากคลังภาพ', false), choose('ถ่ายรูปด้วยกล้อง', true));
+      const anchor = input.closest('label') || input; anchor.insertAdjacentElement('afterend', controls);
+    };
+    const scan = node => { if (!(node instanceof Element || node instanceof Document)) return; if (node instanceof Element && isImageInput(node)) enhance(node); node.querySelectorAll?.('input[type="file"][accept*="image/"]').forEach(enhance); };
+    const start = () => { scan(document); new MutationObserver(records => records.forEach(record => record.addedNodes.forEach(scan))).observe(document.documentElement, { childList: true, subtree: true }); };
+    if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', start, { once: true }); else start();
+  }
+  if (typeof document !== 'undefined') installImageSourceChoices();
 })();
