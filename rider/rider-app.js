@@ -36,6 +36,11 @@
     const source = location?.source === 'manual-coordinate' ? 'กรอกพิกัดเอง' : location?.source === 'rider-geolocation' ? 'GPS อุปกรณ์' : 'แหล่งที่มาไม่ระบุ';
     return `${lat.toFixed(6)}, ${lng.toFixed(6)} · ${captured} · ${source}`;
   };
+  const normalizeSavedLocation = (rider, fallback) => {
+    const current = rider?.last_location && typeof rider.last_location === 'object' ? rider.last_location : {};
+    const source = ['manual-coordinate', 'rider-geolocation'].includes(String(current.source || '')) ? current.source : fallback.source;
+    return { ...(rider || {}), last_location: { ...fallback, ...current, source } };
+  };
 
   async function gate(active, content) {
     app(active, content);
@@ -307,12 +312,13 @@
       button.disabled = true; status.textContent = 'กำลังขอพิกัดจากอุปกรณ์…';
       try {
         const position = await new Promise((resolve, reject) => navigator.geolocation.getCurrentPosition(resolve, reject, { enableHighAccuracy: true, timeout: 12000, maximumAge: 60000 }));
-        const rider = await updateRiderPresence('location', { location: { lat: Number(position.coords.latitude), lng: Number(position.coords.longitude), accuracy: Number(position.coords.accuracy), captured_at: M.ui.nowIso(), source: 'rider-geolocation' } });
-        Object.assign(ctx.rider, rider || {}); $('#riderPresenceLocation').textContent = riderLocationLabel(ctx.rider.last_location); status.textContent = 'บันทึกพิกัดล่าสุดแล้ว'; M.ui.setNotice('ส่งพิกัดปัจจุบันแล้ว');
+        const locationPayload = { lat: Number(position.coords.latitude), lng: Number(position.coords.longitude), accuracy: Number(position.coords.accuracy), captured_at: M.ui.nowIso(), source: 'rider-geolocation' };
+        const rider = await updateRiderPresence('location', { location: locationPayload });
+        Object.assign(ctx.rider, normalizeSavedLocation(rider, locationPayload)); $('#riderPresenceLocation').textContent = riderLocationLabel(ctx.rider.last_location); status.textContent = 'บันทึกพิกัดล่าสุดแล้ว'; M.ui.setNotice('ส่งพิกัดปัจจุบันแล้ว');
       } catch (err) { status.textContent = err?.code === 1 ? 'ยังไม่ได้อนุญาตตำแหน่ง กรุณาเปิดสิทธิ์ในเบราว์เซอร์แล้วลองใหม่' : 'ยังระบุตำแหน่งไม่ได้ กรุณาตรวจ GPS และสัญญาณแล้วลองใหม่'; document.querySelector('#riderManualLocation')?.removeAttribute('hidden'); M.ui.setNotice(status.textContent, 'error'); }
       finally { button.disabled = false; }
     };
-    $('#saveRiderManualLocation').onclick = async () => { const button = $('#saveRiderManualLocation'), status = $('#riderManualLocationStatus'); const lat = Number($('#riderManualLat')?.value), lng = Number($('#riderManualLng')?.value), accuracy = Math.max(0, Number($('#riderManualAccuracy')?.value || 0)); if (!Number.isFinite(lat) || Math.abs(lat) > 90 || !Number.isFinite(lng) || Math.abs(lng) > 180) { status.textContent = 'กรุณากรอก Latitude/Longitude ที่ถูกต้อง'; return M.ui.setNotice(status.textContent, 'error'); } button.disabled = true; status.textContent = 'กำลังบันทึกพิกัดที่กรอก…'; try { const rider = await updateRiderPresence('location', { location: { lat, lng, accuracy, captured_at: M.ui.nowIso(), source: 'manual-coordinate' } }); Object.assign(ctx.rider, rider || {}); $('#riderPresenceLocation').textContent = riderLocationLabel(ctx.rider.last_location); status.textContent = 'บันทึกพิกัดแบบกรอกเองแล้ว'; M.ui.setNotice('บันทึกพิกัดที่กรอกแล้ว'); } catch (error) { status.textContent = error.message || 'บันทึกพิกัดไม่สำเร็จ'; M.ui.setNotice(status.textContent, 'error'); } finally { button.disabled = false; } };
+    $('#saveRiderManualLocation').onclick = async () => { const button = $('#saveRiderManualLocation'), status = $('#riderManualLocationStatus'); const lat = Number($('#riderManualLat')?.value), lng = Number($('#riderManualLng')?.value), accuracy = Math.max(0, Number($('#riderManualAccuracy')?.value || 0)); if (!Number.isFinite(lat) || Math.abs(lat) > 90 || !Number.isFinite(lng) || Math.abs(lng) > 180) { status.textContent = 'กรุณากรอก Latitude/Longitude ที่ถูกต้อง'; return M.ui.setNotice(status.textContent, 'error'); } button.disabled = true; status.textContent = 'กำลังบันทึกพิกัดที่กรอก…'; try { const locationPayload = { lat, lng, accuracy, captured_at: M.ui.nowIso(), source: 'manual-coordinate' }; const rider = await updateRiderPresence('location', { location: locationPayload }); Object.assign(ctx.rider, normalizeSavedLocation(rider, locationPayload)); $('#riderPresenceLocation').textContent = riderLocationLabel(ctx.rider.last_location); status.textContent = 'บันทึกพิกัดแบบกรอกเองแล้ว'; M.ui.setNotice('บันทึกพิกัดที่กรอกแล้ว'); } catch (error) { status.textContent = error.message || 'บันทึกพิกัดไม่สำเร็จ'; M.ui.setNotice(status.textContent, 'error'); } finally { button.disabled = false; } };
   }
 
   async function settings() {
