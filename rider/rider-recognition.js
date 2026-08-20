@@ -1,0 +1,39 @@
+(() => {
+  'use strict';
+  const M = window.APServiceMPA;
+  if (!M) return;
+  if (!document.getElementById('rider-recognition-style')) document.head.insertAdjacentHTML('beforeend', '<link id="rider-recognition-style" rel="stylesheet" href="rider-recognition.css?v=recognition-v1">');
+  const h = M.ui.escapeHtml;
+  const ROLE = 'rider';
+  const roleLabel = 'ไรเดอร์';
+  const privateLabel = 'รายได้';
+  const sessionGet = key => { try { return sessionStorage.getItem(key); } catch { return null; } };
+  const sessionSet = (key, value) => { try { sessionStorage.setItem(key, value); } catch {} };
+  const baht = value => M.ui.baht ? M.ui.baht(Number(value || 0)) : `฿${Number(value || 0).toLocaleString('th-TH')}`;
+  const number = value => Number.isFinite(Number(value)) ? Number(value).toLocaleString('th-TH', { maximumFractionDigits: 2 }) : '—';
+  const dateLabel = value => { const date = new Date(value); return Number.isNaN(date.getTime()) ? 'รอบล่าสุด' : new Intl.DateTimeFormat('th-TH', { dateStyle: 'medium' }).format(date); };
+  const tierLabel = tier => Number.isInteger(Number(tier)) ? `Tier ${Number(tier)}` : 'ยังไม่ติด Tier';
+  const state = { notificationChecks: new Set() };
+
+  function snapshotPath(userId) { return `recognition_snapshots?select=id,scope,period_key,period_start,period_end,ranking_position,tier,quality_score,completed_orders,average_rating,review_count,private_total,metrics&subject_role=eq.${ROLE}&subject_user_id=eq.${encodeURIComponent(userId)}&scope=in.(weekly,monthly)&order=period_end.desc&limit=8`; }
+  function eventPath(userId) { return `recognition_events?select=id,event_type,scope,period_key,title,message,payload,created_at&subject_role=eq.${ROLE}&subject_user_id=eq.${encodeURIComponent(userId)}&seen_at=is.null&order=created_at.desc&limit=1`; }
+  function streakFor(snapshots, tier) { if (!tier) return 0; let count = 0; for (const item of snapshots.filter(row => row.scope === 'weekly')) { if (Number(item.tier) !== Number(tier)) break; count += 1; } return count; }
+  function cardMarkup(snapshots) {
+    if (!snapshots?.length) return `<section class="recognition-card recognition-card--empty" aria-label="Recognition ${roleLabel}"><div class="recognition-card__icon" aria-hidden="true">✦</div><div><p class="recognition-card__eyebrow">AP SERVICE RECOGNITION</p><h2>เริ่มสะสมผลงานของคุณ</h2><p>ยังไม่มีผล Recognition ที่ผ่านเกณฑ์ของรอบประเมิน ระบบจะสรุปจากข้อมูลจริงหลังรอบรายสัปดาห์หรือรายเดือนเท่านั้น</p></div></section>`;
+    const latest = snapshots.find(row => row.scope === 'weekly') || snapshots[0]; const tier = Number(latest.tier) || null; const streak = streakFor(snapshots, tier); const topQuality = !tier || tier > 3 ? Number(latest.ranking_position) > 0 && Number(latest.ranking_position) <= 50 : false;
+    const badge = tier ? `<span class="recognition-tier recognition-tier--${tier}"><b>${tier}</b><span>Tier</span></span>` : '<span class="recognition-tier recognition-tier--none">กำลังประเมิน</span>'; const special = topQuality ? '<span class="recognition-special-badge">ผู้ให้บริการคุณภาพสูง 1 ใน 50</span>' : ''; const scope = latest.scope === 'monthly' ? 'สรุปรายเดือน' : 'สรุปรายสัปดาห์';
+    return `<section class="recognition-card" aria-label="สรุป Recognition ${roleLabel}"><div class="recognition-card__head"><div><p class="recognition-card__eyebrow">AP SERVICE RECOGNITION · ${h(scope)}</p><h2>${h(tierLabel(tier))}</h2><p class="recognition-card__period">ข้อมูลสิ้นสุด ${h(dateLabel(latest.period_end))}</p></div>${badge}</div>${special ? `<div class="recognition-card__special">${special}</div>` : ''}<div class="recognition-card__metrics"><div><span>คะแนนคุณภาพ</span><strong>${h(number(latest.quality_score))}<small>/100</small></strong></div><div><span>งานสำเร็จ</span><strong>${h(number(latest.completed_orders))}</strong></div><div><span>คะแนนรีวิว</span><strong>${h(number(latest.average_rating))}<small>/5</small></strong></div><div><span>${privateLabel}</span><strong>${h(baht(latest.private_total))}</strong></div></div><p class="recognition-card__summary">${tier ? `คุณอยู่ ${h(tierLabel(tier))} จากผลการประเมินล่าสุด` : 'ผลล่าสุดผ่านเกณฑ์ข้อมูลแล้ว แต่ยังไม่ติดอันดับ Tier 1–5'}${streak >= 2 ? ` · รักษา ${h(tierLabel(tier))} ต่อเนื่อง ${streak} สัปดาห์` : ''}</p></section>`;
+  }
+  async function readSnapshots(user) { return M.request(snapshotPath(user.id), { private: true, cacheTtlMs: 8_000, cacheKey: `rider-recognition-snapshots:${user.id}` }).catch(error => { console.warn('Rider recognition read skipped', error); return null; }); }
+  async function markSeen(eventId) { try { await M.request('rpc/recognition_mark_event_seen', { method: 'POST', private: true, forceSession: true, body: JSON.stringify({ p_event_id: eventId }) }); } catch (error) { console.warn('Rider recognition acknowledgement skipped', error); } }
+  function closeModal(modal) { modal?.remove(); }
+  function present(event, user) {
+    const popupKey = `apservice-recognition-popup:${ROLE}:${user.id}`; if (!event?.id || sessionGet(popupKey)) return; sessionSet(popupKey, event.id);
+    const payload = event.payload || {}; const lines = [payload.tier ? `ระดับ ${tierLabel(payload.tier)}` : '', payload.completed_orders !== undefined ? `งานสำเร็จ ${number(payload.completed_orders)} งาน` : '', payload.average_rating !== undefined ? `คะแนนรีวิว ${number(payload.average_rating)}/5` : '', payload.streak_weeks ? `ต่อเนื่อง ${number(payload.streak_weeks)} สัปดาห์` : ''].filter(Boolean);
+    const modal = document.createElement('div'); modal.className = 'recognition-modal'; modal.setAttribute('role', 'presentation'); modal.innerHTML = `<div class="recognition-confetti" aria-hidden="true">${Array.from({ length: 16 }, (_, index) => `<i style="--n:${index}"></i>`).join('')}</div><section class="recognition-dialog" role="dialog" aria-modal="true" aria-labelledby="recognition-title"><button type="button" class="recognition-dialog__close" aria-label="ปิด">×</button><div class="recognition-dialog__spark" aria-hidden="true">✦</div><p class="recognition-card__eyebrow">ขอแสดงความยินดี ${h(roleLabel)}</p><h2 id="recognition-title">${h(event.title || 'คุณมีความสำเร็จใหม่')}</h2><p>${h(event.message || 'ผลงานของคุณได้รับการบันทึกในระบบ Recognition แล้ว')}</p>${lines.length ? `<ul>${lines.map(line => `<li>${h(line)}</li>`).join('')}</ul>` : ''}<button type="button" class="mpa-button recognition-dialog__done">รับทราบ</button></section>`;
+    document.body.append(modal); const dismiss = () => closeModal(modal); modal.querySelector('.recognition-dialog__close').onclick = dismiss; modal.querySelector('.recognition-dialog__done').onclick = dismiss; modal.addEventListener('click', entry => { if (entry.target === modal) dismiss(); }); const escape = entry => { if (entry.key === 'Escape') { dismiss(); document.removeEventListener('keydown', escape); } }; document.addEventListener('keydown', escape); modal.querySelector('.recognition-dialog__done').focus(); void markSeen(event.id);
+  }
+  async function notify({ user }) { if (!user?.id) return; const key = `apservice-recognition-checked:${ROLE}:${user.id}`; if (state.notificationChecks.has(key) || sessionGet(key)) return; state.notificationChecks.add(key); try { const rows = await M.request(eventPath(user.id), { private: true, cacheTtlMs: 0, cacheKey: `rider-recognition-events:${user.id}` }); sessionSet(key, '1'); present(rows?.[0], user); } catch (error) { state.notificationChecks.delete(key); console.warn('Rider recognition notification skipped', error); } }
+  async function mount({ host, user }) { if (!host || !user?.id) return; host.innerHTML = M.ui.loading('กำลังโหลด Recognition…'); const snapshots = await readSnapshots(user); host.innerHTML = snapshots === null ? M.ui.error('โหลด Recognition ไม่สำเร็จ', 'กรุณาลองใหม่ภายหลัง') : cardMarkup(snapshots); }
+  window.APServiceRiderRecognition = Object.freeze({ notify, mount });
+})();
