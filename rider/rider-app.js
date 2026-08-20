@@ -8,7 +8,7 @@
   const page = document.body.dataset.page;
   const params = new URLSearchParams(location.search);
   const pageScope = name => { const scope = M.network.createScope(name); addEventListener('pagehide', () => scope.dispose(), { once: true }); return scope; };
-  const links = [['dashboard', 'ภาพรวม'], ['jobs', 'งานจัดส่ง'], ['earnings', 'รายได้'], ['profile', 'โปรไฟล์'], ['settings', 'ตั้งค่า']];
+  const links = [['dashboard', 'ภาพรวม'], ['jobs', 'งานจัดส่ง'], ['notifications', 'แจ้งเตือน'], ['earnings', 'รายได้'], ['profile', 'โปรไฟล์'], ['settings', 'ตั้งค่า']];
   const dispatchLabels = Object.freeze({ unassigned: 'ยังไม่มอบหมาย', assigned: 'มอบหมายแล้ว', en_route: 'กำลังไปจุดรับ', arrived_pickup: 'ถึงจุดรับแล้ว', picked_up: 'รับสินค้าแล้ว', delivering: 'กำลังไปส่ง', delivered: 'ส่งสำเร็จ', exception: 'มีเหตุขัดข้อง' });
   const dispatchLabel = value => dispatchLabels[String(value || '')] || String(value || 'ยังไม่ระบุ');
   const formatEta = value => { const date = new Date(value); if (Number.isNaN(date.getTime())) return 'ยังไม่กำหนด'; const minutes = Math.round((date.getTime() - Date.now()) / 60000); return minutes < 0 ? `เลยกำหนด ${Math.abs(minutes)} นาที` : minutes < 60 ? `อีกประมาณ ${minutes} นาที` : `ประมาณ ${Math.floor(minutes / 60)} ชม. ${minutes % 60} นาที`; };
@@ -324,10 +324,23 @@
     $('#saveRiderManualLocation').onclick = async () => { const button = $('#saveRiderManualLocation'), status = $('#riderManualLocationStatus'); const lat = Number($('#riderManualLat')?.value), lng = Number($('#riderManualLng')?.value), accuracy = Math.max(0, Number($('#riderManualAccuracy')?.value || 0)); if (!Number.isFinite(lat) || Math.abs(lat) > 90 || !Number.isFinite(lng) || Math.abs(lng) > 180) { status.textContent = 'กรุณากรอก Latitude/Longitude ที่ถูกต้อง'; return M.ui.setNotice(status.textContent, 'error'); } button.disabled = true; status.textContent = 'กำลังบันทึกพิกัดที่กรอก…'; try { const locationPayload = { lat, lng, accuracy, captured_at: M.ui.nowIso(), source: 'manual-coordinate' }; const rider = await updateRiderPresence('location', { location: locationPayload }); Object.assign(ctx.rider, normalizeSavedLocation(rider, locationPayload)); $('#riderPresenceLocation').textContent = riderLocationLabel(ctx.rider.last_location); status.textContent = 'บันทึกพิกัดแบบกรอกเองแล้ว'; M.ui.setNotice('บันทึกพิกัดที่กรอกแล้ว'); } catch (error) { status.textContent = error.message || 'บันทึกพิกัดไม่สำเร็จ'; M.ui.setNotice(status.textContent, 'error'); } finally { button.disabled = false; } };
   }
 
+  async function notifications() {
+    const ctx = await gate('notifications', `<div class="mpa-page-head"><div><h1>การแจ้งเตือน</h1><p>ข้อความงานจัดส่ง การมอบหมาย และเวลาถึงโดยประมาณของคุณ</p></div><button id="refreshNotifications" class="mpa-button mpa-button-secondary" type="button">รีเฟรช</button></div><section id="notifications" class="mpa-card">${M.ui.loading('กำลังโหลดการแจ้งเตือน…')}</section>`);
+    if (!ctx) return;
+    const scope = pageScope('rider:notifications');
+    const path = `mobile_notifications?select=id,title,body,data,status,read_at,created_at&recipient_id=eq.${encodeURIComponent(ctx.user.id)}&order=created_at.desc&limit=100`;
+    const safeDeepLink = value => { try { const url = new URL(String(value || ''), location.href); return url.origin === location.origin ? url.href : ''; } catch (_) { return ''; } };
+    const markRead = async id => { await M.request(`mobile_notifications?id=eq.${encodeURIComponent(id)}&recipient_id=eq.${encodeURIComponent(ctx.user.id)}`, { method: 'PATCH', private: true, headers: { Prefer: 'return=minimal' }, body: JSON.stringify({ read_at: M.ui.nowIso() }) }); };
+    const render = rows => { const host = $('#notifications'); host.innerHTML = rows?.length ? `<div class="rider-notice-list">${rows.map(row => `<article class="rider-notice-card${row.read_at ? '' : ' rider-notice-unread'}" data-notification-id="${h(row.id)}"><div class="rider-notice-card__head"><strong>${h(row.title || 'แจ้งเตือน AP Service')}</strong><span class="mpa-badge">${h(row.status || 'แจ้งเตือน')}</span></div><p>${h(row.body || 'ไม่มีรายละเอียด')}</p><small class="mpa-muted">${row.created_at ? h(new Date(row.created_at).toLocaleString('th-TH')) : '-'}</small><div class="rider-notice-card__actions">${safeDeepLink(row.data?.deep_link) ? `<a class="mpa-button mpa-button-secondary" href="${h(safeDeepLink(row.data.deep_link))}">เปิดปลายทาง</a>` : ''}${row.read_at ? '<span class="mpa-muted">อ่านแล้ว</span>' : `<button type="button" class="mpa-button mpa-button-secondary" data-mark-rider-notification="${h(row.id)}">ทำเครื่องหมายว่าอ่านแล้ว</button>`}</div></article>`).join('')}</div>` : M.ui.empty('ยังไม่มีการแจ้งเตือน'); host.querySelectorAll('[data-mark-rider-notification]').forEach(button => button.onclick = async () => { button.disabled = true; try { await markRead(button.dataset.markRiderNotification); button.closest('[data-notification-id]')?.classList.remove('rider-notice-unread'); button.replaceWith(document.createTextNode('อ่านแล้ว')); } catch (error) { button.disabled = false; M.ui.setNotice(error.message || 'ทำเครื่องหมายอ่านไม่สำเร็จ', 'error'); } }); };
+    const load = async forceFresh => { const button = $('#refreshNotifications'); if (button) button.disabled = true; try { const rows = await scope.request(path, { private: true, forceFresh, cacheTtlMs: 15_000, cacheKey: `rider-notifications:${ctx.user.id}` }); render(rows || []); } catch (error) { $('#notifications').innerHTML = M.ui.error('โหลดการแจ้งเตือนไม่สำเร็จ', error.message); } finally { if (button) button.disabled = false; } };
+    $('#refreshNotifications').onclick = () => load(true); await load(false);
+    const stop = M.network.startBackgroundSync({ key: `rider-notifications:${ctx.user.id}`, intervalMs: 30_000, task: async () => { await load(true); return { changed: true }; }, onError: error => M.ui.setNotice(`อัปเดตการแจ้งเตือนไม่สำเร็จ: ${error.message}`, 'error') }); addEventListener('pagehide', stop, { once: true });
+  }
+
   async function settings() {
     const ctx = await gate('settings', `<section class="mpa-card"><h1>ตั้งค่าไรเดอร์</h1><p class="mpa-muted">การตั้งค่าหน้านี้มีผลเฉพาะบัญชีของคุณ กฎธุรกิจกลางอยู่ใน Admin Control Plane</p><button id="out" class="mpa-button mpa-button-secondary">ออกจากระบบ</button></section>`);
     if (ctx) $('#out').onclick = () => M.auth.signOut('login.html');
   }
 
-  ({ login, dashboard, jobs, delivery, earnings, profile, settings }[page] || login)();
+  ({ login, dashboard, jobs, notifications, delivery, earnings, profile, settings }[page] || login)();
 })();

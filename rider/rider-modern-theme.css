@@ -68,6 +68,12 @@ body {
 @media (max-width: 430px) {
   .rider-job-card__dispatch,.rider-dispatch-panel { grid-template-columns:1fr; }
 }
+.rider-notice-list { display:grid; gap:12px; }
+.rider-notice-card { position:relative; padding:15px; border:1px solid #f0ddcc; border-radius:18px; background:linear-gradient(145deg,#fff,#fff7ef); box-shadow:0 8px 20px rgba(151,72,20,.05); }
+.rider-notice-card.rider-notice-unread { border-color:#e67b27; box-shadow:0 10px 24px rgba(230,123,39,.12); }
+.rider-notice-card__head,.rider-notice-card__actions { display:flex; align-items:center; justify-content:space-between; gap:10px; flex-wrap:wrap; }
+.rider-notice-card p { margin:9px 0; line-height:1.55; }
+.rider-notice-card__actions { justify-content:flex-start; margin-top:10px; }
 @media (prefers-reduced-motion: reduce) {
   .mpa-nav a,.mpa-card,.rider-job-card,.mpa-button { transition:none; }
 }

@@ -1,0 +1,14 @@
+const assert = require('node:assert');
+const fs = require('node:fs');
+const path = require('node:path');
+const root = path.resolve(__dirname, '..');
+const app = fs.readFileSync(path.join(root, 'rider/rider-app.js'), 'utf8');
+const page = fs.readFileSync(path.join(root, 'rider/notifications.html'), 'utf8');
+const css = fs.readFileSync(path.join(root, 'rider/rider-modern-theme.css'), 'utf8');
+assert.match(page, /data-page="notifications"/, 'Rider must have a Notifications route page');
+assert.match(app, /notifications, delivery/, 'Rider route switch must mount Notifications');
+assert.match(app, /mobile_notifications\?select=id,title,body,data,status,read_at,created_at&recipient_id=/, 'Rider Notifications must scope rows to the current Rider');
+assert.match(app, /data-mark-rider-notification/, 'Rider Notifications must support Mark Read');
+assert.match(app, /safeDeepLink/, 'Rider Notifications must validate deep links');
+assert.match(css, /rider-notice-card/, 'Rider Notifications must have a dedicated visual surface');
+console.log('rider_notifications_contract_test: PASS');
