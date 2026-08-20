@@ -136,7 +136,7 @@
         if (!confirm(`รับงานจาก ${job.store_name || 'ร้านค้า'} ใช่หรือไม่?`)) return;
         button.disabled = true; button.textContent = 'กำลังรับงาน…';
         try {
-          const claimed = await M.request(`delivery_orders?id=eq.${encodeURIComponent(job.id)}&rider_id=is.null&status=eq.${encodeURIComponent(job.status)}`, { method: 'PATCH', private: true, headers: { Prefer: 'return=representation' }, body: JSON.stringify({ rider_id: ctx.rider.id, rider_name: ctx.rider.name, status: next, accepted_at: M.ui.nowIso(), updated_at: M.ui.nowIso() }) });
+          const claimed = await M.request(`delivery_orders?id=eq.${encodeURIComponent(job.id)}&rider_id=is.null&status=eq.${encodeURIComponent(job.status)}`, { method: 'PATCH', private: true, headers: { Prefer: 'return=representation' }, body: JSON.stringify({ rider_id: ctx.rider.id, rider_name: ctx.rider.name, status: next, accepted_at: M.ui.nowIso(), updated_at: M.ui.nowIso() }), signal: typeof AbortSignal?.timeout === 'function' ? AbortSignal.timeout(15000) : undefined });
           if (!Array.isArray(claimed) || !claimed.length) throw new Error('งานนี้ถูกรับหรือเปลี่ยนสถานะโดยไรเดอร์คนอื่นแล้ว');
           M.ui.setNotice('รับงานแล้ว'); location.assign(`delivery.html?id=${encodeURIComponent(job.id)}`);
         } catch (err) { button.disabled = false; button.textContent = 'รับงาน'; M.ui.setNotice(err.message || 'รับงานไม่สำเร็จ', 'error'); }
