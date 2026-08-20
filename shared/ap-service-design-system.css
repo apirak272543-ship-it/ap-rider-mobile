@@ -22,6 +22,12 @@ body { min-height: 100dvh; letter-spacing: -.01em; }
 .mpa-table-wrap { border-radius: var(--soft-radius); box-shadow: 0 8px 20px rgba(16, 37, 36, .04); }
 .mpa-table th { letter-spacing: .035em; }
 .mpa-state { border-radius: var(--soft-radius); background: color-mix(in srgb, var(--ap-paper) 78%, var(--ap-brand-soft)); }
+@media (prefers-reduced-motion: no-preference) {
+  .mpa-button,.mpa-nav a,button:not(:disabled),a[href],[role="button"] { -webkit-tap-highlight-color: transparent; touch-action: manipulation; transition: transform 140ms cubic-bezier(.23,1,.32,1), box-shadow 140ms cubic-bezier(.23,1,.32,1), filter 140ms cubic-bezier(.23,1,.32,1); }
+  .mpa-button:active,button:not(:disabled):active,a[href]:active,[role="button"]:active { transform: translateY(2px) scale(.965); }
+  .mpa-button:not(.mpa-button-secondary):active { box-shadow: 0 3px 8px color-mix(in srgb, var(--ap-brand) 27%, transparent); filter: saturate(.94) brightness(.98); }
+  .mpa-nav a:active { transform: translateY(1px) scale(.97); }
+}
 @media (max-width: 760px) {
   .mpa-shell { padding-top: 18px; }
   .mpa-button { min-height: 40px; }
