@@ -94,18 +94,10 @@
   const availableOrdersPath = () => `delivery_orders?select=id,status,payable,store_name,pickup_address,delivery_address,customer_name,dispatch_status,estimated_arrival_at,dispatch_note,dispatch_updated_at,ordered_at&rider_id=is.null&status=in.(${claimableStatuses.map(status => encodeURIComponent(status)).join(',')})&order=ordered_at.asc&limit=100`;
 
   async function login() {
-    document.body.innerHTML = `<main class="mpa-shell" style="min-height:100vh;display:grid;place-items:center"><section class="mpa-card" style="width:min(430px,100%)"><form id="login"><div class="mpa-field"><input id="email" type="email" autocomplete="email" aria-label="อีเมล" required></div><div class="mpa-field"><input id="password" type="password" autocomplete="current-password" aria-label="รหัสผ่าน" required></div><button class="mpa-button" style="width:100%">เข้าสู่ระบบ</button></form><a class="mpa-button mpa-button-secondary" href="../rider.html" aria-label="เปิดหน้าไรเดอร์แบบเดิม" title="เปิดหน้าไรเดอร์แบบเดิม" style="display:inline-flex;width:44px;padding-inline:0;justify-content:center;margin-top:12px">&#8599;</a></section></main>`;
-    $('#login').onsubmit = async event => {
-      event.preventDefault();
-      try {
-        const session = await M.auth.signIn($('#email').value.trim(), $('#password').value);
-        if (!(await M.auth.rolesFor(session.user.id)).includes('rider')) {
-          M.auth.signOut('login.html');
-          throw new Error('บัญชีนี้ไม่มีสิทธิ์ไรเดอร์');
-        }
-        location.assign('dashboard.html');
-      } catch (err) { M.ui.setNotice(err.message, 'error'); }
-    };
+    document.body.innerHTML = `<main class="ap-login-shell"><section class="ap-login-card" data-login-panel="rider"><div class="ap-login-brandline"><span class="ap-login-mark">AS</span><div><strong>AP Service</strong><small>ศูนย์จัดการงานส่งและสถานะ Rider</small></div></div><span class="ap-login-role">Rider Login</span><h1 class="ap-login-title">เข้าสู่ระบบ Rider</h1><p class="ap-login-intro">ใช้บัญชีที่ Admin สร้างและผูกสิทธิ์กับโปรไฟล์ Rider แล้ว</p><form id="login" class="ap-login-form"><label class="ap-login-field"><span>อีเมล</span><div class="ap-login-control"><span class="ap-login-icon" aria-hidden="true">${window.APLoginUI?.icon('mail') || ''}</span><input id="email" type="email" autocomplete="email" aria-label="อีเมล" placeholder="name@example.com" required></div></label><label class="ap-login-field"><span>รหัสผ่าน</span><div class="ap-login-control"><span class="ap-login-icon" aria-hidden="true">${window.APLoginUI?.icon('lock') || ''}</span><input id="password" type="password" autocomplete="current-password" aria-label="รหัสผ่าน" placeholder="กรอกรหัสผ่านของคุณ" required><button class="ap-login-password-toggle" type="button" data-password-toggle aria-controls="password" aria-label="แสดงรหัสผ่าน">${window.APLoginUI?.icon('eye') || ''}</button></div></label><button class="ap-login-submit" data-login-submit type="submit">เข้าสู่ระบบ</button><p class="ap-login-status" data-login-status aria-live="polite"></p></form><div class="ap-login-admin-note"><span aria-hidden="true">${window.APLoginUI?.icon('shield') || ''}</span><div><strong>บัญชีนี้สร้างโดย Admin เท่านั้น</strong><p>หากยังไม่มีบัญชี โปรดให้ผู้ดูแลระบบสร้างและผูกสิทธิ์ก่อนเข้าสู่ระบบ</p></div></div><a class="ap-login-back" href="../rider.html" aria-label="เปิดหน้าไรเดอร์แบบเดิม" title="เปิดหน้าไรเดอร์แบบเดิม">กลับหน้าหลัก Rider</a></section></main>`;
+    const loginForm = $('#login');
+    window.APLoginUI?.enhance(loginForm);
+    loginForm.onsubmit = async event => { event.preventDefault(); try { const session = await M.auth.signIn($('#email').value.trim(), $('#password').value); if (!(await M.auth.rolesFor(session.user.id)).includes('rider')) { M.auth.signOut('login.html'); throw new Error('บัญชีนี้ไม่มีสิทธิ์ Rider'); } await window.APLoginUI?.showSuccess(loginForm); location.assign('dashboard.html'); } catch (error) { window.APLoginUI?.showError(loginForm, error.message || 'เข้าสู่ระบบ Rider ไม่สำเร็จ'); M.ui.setNotice(error.message || 'เข้าสู่ระบบ Rider ไม่สำเร็จ', 'error'); } };
   }
 
   async function dashboard() {

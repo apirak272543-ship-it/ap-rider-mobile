@@ -4,3 +4,242 @@
 .has-login-media body { isolation: isolate; }
 @media (prefers-reduced-motion: reduce) { [data-login-media-layer][data-media-kind="animated_gif"] { background-image: none !important; background-color: #f5f7fb; opacity: 1; } }
 @media (max-width: 640px) { [data-login-media-layer]::after { background: linear-gradient(180deg, rgba(255,255,255,.9), rgba(255,255,255,.62)); } }
+
+/* AP Login UI v1 — shared visual/motion contract for every application. */
+:root {
+  --ap-login-brand: #0b8c7c;
+  --ap-login-brand-deep: #075c54;
+  --ap-login-coral: #f46758;
+  --ap-login-ink: #173b38;
+  --ap-login-muted: #6b817d;
+  --ap-login-line: rgba(11, 140, 124, .16);
+  --ap-login-shadow: 0 24px 65px rgba(9, 78, 71, .16);
+  --ap-login-ease: cubic-bezier(.23, 1, .32, 1);
+}
+
+.ap-login-shell,
+.auth-shell {
+  min-height: 100vh;
+  display: grid;
+  place-items: center;
+  padding: clamp(18px, 5vw, 54px) 16px;
+  background:
+    radial-gradient(circle at 10% 15%, rgba(244, 103, 88, .14), transparent 34%),
+    radial-gradient(circle at 90% 90%, rgba(11, 140, 124, .18), transparent 38%),
+    linear-gradient(145deg, #f7fffd, #eef8f6 52%, #fff8f5);
+}
+
+.ap-login-card,
+.ap-login-panel,
+.auth-card {
+  position: relative;
+  isolation: isolate;
+  width: min(100%, 470px);
+  overflow: hidden;
+  border: 1px solid rgba(255, 255, 255, .82);
+  border-radius: 30px;
+  background: rgba(255, 255, 255, .92);
+  box-shadow: var(--ap-login-shadow);
+  backdrop-filter: blur(18px);
+  color: var(--ap-login-ink);
+  animation: ap-login-enter 460ms var(--ap-login-ease) both;
+}
+
+.ap-login-card::before,
+.ap-login-panel::before,
+.auth-card::before {
+  content: '';
+  position: absolute;
+  inset: 0 0 auto;
+  height: 7px;
+  background: linear-gradient(90deg, var(--ap-login-brand), #20b7a0 52%, var(--ap-login-coral));
+  z-index: -1;
+}
+
+.ap-login-card,
+.ap-login-panel { padding: clamp(24px, 6vw, 38px); }
+.auth-card { padding: clamp(22px, 5vw, 34px); }
+
+.ap-login-brandline,
+.brand-lockup {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 22px;
+}
+
+.ap-login-mark,
+.brand-mark {
+  display: grid;
+  place-items: center;
+  width: 52px;
+  height: 52px;
+  flex: 0 0 52px;
+  border-radius: 17px;
+  color: #fff;
+  background: linear-gradient(145deg, #12a895, var(--ap-login-brand-deep));
+  box-shadow: 0 12px 24px rgba(11, 140, 124, .24);
+  font-weight: 900;
+  letter-spacing: -.04em;
+}
+
+.ap-login-brandline strong,
+.brand-lockup strong { display: block; color: var(--ap-login-ink); font-size: 1.08rem; }
+.ap-login-brandline small,
+.brand-lockup small { display: block; margin-top: 3px; color: var(--ap-login-muted); font-size: .78rem; }
+
+.ap-login-role,
+.ap-login-kicker,
+.eyebrow {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  margin-bottom: 8px;
+  color: var(--ap-login-brand-deep);
+  font-size: .72rem;
+  font-weight: 900;
+  letter-spacing: .12em;
+  text-transform: uppercase;
+}
+
+.ap-login-title { margin: 0; color: var(--ap-login-ink); font-size: clamp(1.65rem, 5vw, 2.1rem); line-height: 1.16; letter-spacing: -.04em; }
+.ap-login-intro,
+.ap-login-help { margin: 9px 0 22px; color: var(--ap-login-muted); line-height: 1.65; }
+.ap-login-form,
+.stack-form { display: grid; gap: 14px; }
+
+.ap-login-field,
+.stack-form > label {
+  display: grid;
+  gap: 7px;
+  color: var(--ap-login-ink);
+  font-size: .86rem;
+  font-weight: 800;
+}
+
+.ap-login-control { position: relative; display: flex; align-items: center; }
+.ap-login-icon { position: absolute; left: 14px; width: 20px; height: 20px; color: var(--ap-login-brand); pointer-events: none; }
+.ap-login-icon svg { display: block; width: 100%; height: 100%; stroke: currentColor; fill: none; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; }
+.ap-login-control input,
+.ap-login-field input,
+.auth-card input,
+.stack-form input {
+  width: 100%;
+  min-height: 50px;
+  border: 1px solid var(--ap-login-line);
+  border-radius: 16px;
+  background: rgba(249, 255, 253, .94);
+  color: var(--ap-login-ink);
+  font: inherit;
+  outline: 0;
+  transition: border-color 160ms var(--ap-login-ease), box-shadow 160ms var(--ap-login-ease), transform 160ms var(--ap-login-ease);
+}
+.ap-login-control input { padding: 0 48px; }
+.ap-login-field input,
+.auth-card input,
+.stack-form input { padding: 0 14px; }
+.ap-login-control input:focus,
+.ap-login-field input:focus,
+.auth-card input:focus,
+.stack-form input:focus { border-color: var(--ap-login-brand); box-shadow: 0 0 0 4px rgba(11, 140, 124, .12); transform: translateY(-1px); }
+
+.ap-login-password-toggle {
+  position: absolute;
+  right: 8px;
+  display: grid;
+  place-items: center;
+  width: 36px;
+  height: 36px;
+  border: 0;
+  border-radius: 11px;
+  color: var(--ap-login-muted);
+  background: transparent;
+  cursor: pointer;
+}
+.ap-login-password-toggle:hover { color: var(--ap-login-brand-deep); background: rgba(11, 140, 124, .08); }
+.ap-login-password-toggle svg { width: 18px; height: 18px; stroke: currentColor; fill: none; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; }
+
+.ap-login-submit,
+.auth-card .button-primary,
+.auth-card .button,
+.ap-login-card .mpa-button:not(.mpa-button-secondary),
+.ap-login-panel .mpa-button:not(.mpa-button-secondary) {
+  position: relative;
+  min-height: 52px;
+  width: 100%;
+  border: 0;
+  border-radius: 16px;
+  color: #fff;
+  background: linear-gradient(135deg, var(--ap-login-brand), #13a796);
+  box-shadow: 0 13px 24px rgba(11, 140, 124, .2);
+  font-weight: 900;
+  cursor: pointer;
+  transition: transform 160ms var(--ap-login-ease), box-shadow 160ms var(--ap-login-ease), filter 160ms var(--ap-login-ease);
+}
+.ap-login-submit:hover,
+.auth-card .button-primary:hover,
+.auth-card .button:hover { filter: saturate(1.08); box-shadow: 0 17px 28px rgba(11, 140, 124, .26); }
+.ap-login-submit:active,
+.auth-card .button-primary:active,
+.auth-card .button:active { transform: scale(.97); }
+.ap-login-submit:disabled,
+.auth-card button:disabled { cursor: wait; opacity: .72; }
+
+.ap-login-admin-note {
+  display: flex;
+  gap: 10px;
+  align-items: flex-start;
+  margin-top: 16px;
+  padding: 13px 14px;
+  border: 1px solid rgba(244, 103, 88, .2);
+  border-radius: 16px;
+  background: linear-gradient(135deg, rgba(255, 247, 244, .96), rgba(249, 255, 253, .96));
+  color: var(--ap-login-muted);
+  line-height: 1.55;
+}
+.ap-login-admin-note svg { flex: 0 0 20px; width: 20px; height: 20px; margin-top: 2px; stroke: var(--ap-login-coral); fill: none; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; }
+.ap-login-admin-note strong { display: block; margin-bottom: 2px; color: var(--ap-login-ink); }
+.ap-login-admin-note p { margin: 0; font-size: .84rem; }
+
+.ap-login-status,
+#signin-message,
+.form-message {
+  min-height: 1.45em;
+  margin: 2px 0 0;
+  color: var(--ap-login-muted);
+  font-size: .86rem;
+  line-height: 1.45;
+}
+.ap-login-status.is-loading { color: var(--ap-login-brand-deep); }
+.ap-login-status.is-error,
+.form-message.is-error { color: #b42318; }
+.ap-login-status.is-success,
+.form-message.is-success { color: #087f6e; }
+
+[data-login-panel].is-error,
+.ap-login-form.is-error,
+.auth-card.is-error { animation: ap-login-shake 360ms var(--ap-login-ease); }
+[data-login-panel].is-success,
+.ap-login-form.is-success,
+.auth-card.is-success { box-shadow: 0 24px 70px rgba(244, 103, 88, .2), 0 0 0 4px rgba(239, 116, 176, .08); }
+.ap-login-success-burst { position: fixed; inset: 0; z-index: 20; pointer-events: none; background: radial-gradient(circle at 50% 50%, rgba(255, 160, 210, .36), transparent 25%), radial-gradient(circle at 30% 35%, rgba(11, 140, 124, .2), transparent 18%), radial-gradient(circle at 72% 64%, rgba(244, 103, 88, .2), transparent 20%); animation: ap-login-burst 300ms var(--ap-login-ease) both; }
+.ap-login-success-burst::before,
+.ap-login-success-burst::after { content: ''; position: absolute; inset: 50%; width: 7px; height: 7px; border-radius: 50%; background: #f59ac7; box-shadow: 0 -76px 0 #0b9b92, 54px -54px 0 #f46758, 76px 0 0 #f59ac7, 54px 54px 0 #0b9b92, 0 76px 0 #f46758, -54px 54px 0 #f59ac7, -76px 0 0 #0b9b92, -54px -54px 0 #f46758; animation: ap-login-sparkle 420ms var(--ap-login-ease) both; }
+.ap-login-success-burst::after { transform: rotate(22deg) scale(.7); opacity: .7; }
+
+.ap-login-back { display: inline-flex; justify-content: center; width: 100%; margin-top: 14px; color: var(--ap-login-brand-deep); font-weight: 800; text-decoration: none; }
+.ap-login-back:hover { text-decoration: underline; }
+
+@keyframes ap-login-enter { from { opacity: 0; transform: translateY(12px) scale(.985); } to { opacity: 1; transform: translateY(0) scale(1); } }
+@keyframes ap-login-shake { 0%,100% { transform: translateX(0); } 25% { transform: translateX(-6px); } 55% { transform: translateX(5px); } 78% { transform: translateX(-3px); } }
+@keyframes ap-login-burst { from { opacity: 0; transform: scale(.96); } to { opacity: 1; transform: scale(1); } }
+@keyframes ap-login-sparkle { from { opacity: 0; transform: scale(.35); } to { opacity: 1; transform: scale(1); } }
+
+@media (max-width: 640px) {
+  .ap-login-shell, .auth-shell { padding: 12px; }
+  .ap-login-card, .ap-login-panel, .auth-card { border-radius: 24px; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .ap-login-card, .ap-login-panel, .auth-card, [data-login-panel].is-error, .ap-login-form.is-error, .auth-card.is-error, .ap-login-success-burst, .ap-login-success-burst::before, .ap-login-success-burst::after { animation: none !important; }
+  .ap-login-control input, .ap-login-field input, .auth-card input, .stack-form input, .ap-login-submit, .auth-card .button-primary, .auth-card .button { transition: none !important; }
+}
