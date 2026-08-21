@@ -32,6 +32,15 @@
     return result?.rider || null;
   }
 
+  async function updateRiderDelivery(operation, orderId, data) {
+    const session = await M.auth.refreshSession(false);
+    if (!session?.access_token) throw new Error('เซสชัน Rider หมดอายุ กรุณาเข้าสู่ระบบใหม่');
+    const response = await fetch(`${M.config.url}/functions/v1/role-access`, { method: 'POST', headers: { apikey: M.config.publishableKey, Authorization: `Bearer ${session.access_token}`, 'Content-Type': 'application/json' }, body: JSON.stringify({ action: 'update_rider_delivery', operation, order_id: orderId, data }) });
+    const result = await response.json().catch(() => null);
+    if (!response.ok) throw new Error(result?.error || 'ไม่สามารถบันทึกงานจัดส่งผ่าน server ได้');
+    return result?.order || null;
+  }
+
   const riderLocationLabel = location => {
     const lat = Number(location?.lat), lng = Number(location?.lng);
     if (!Number.isFinite(lat) || !Number.isFinite(lng)) return 'ยังไม่ได้ส่งพิกัดจากอุปกรณ์';
@@ -183,7 +192,7 @@
           if (!session?.access_token || !session?.user?.id) throw new Error('เซสชันหมดอายุ กรุณาเข้าสู่ระบบใหม่ก่อนอัปโหลด');
           const uploaded = await window.APServiceMedia.uploadPrivateImage(file, { url: M.config.url, publishableKey: M.config.publishableKey, accessToken: session.access_token, actorId: session.user.id, bucket: 'delivery-proofs', scope: job.id, mediaType: 'DELIVERY_PROOF', ownerType: 'rider' });
           proofRef = uploaded.storageRef;
-          await M.request(`delivery_orders?id=eq.${encodeURIComponent(job.id)}`, { method: 'PATCH', private: true, headers: { Prefer: 'return=minimal' }, body: JSON.stringify({ proof_image: proofRef, updated_at: M.ui.nowIso() }) });
+          await updateRiderDelivery('proof', job.id, { proof_image: proofRef });
           status.textContent = 'อัปโหลด ตรวจสอบ และบันทึกหลักฐานส่งงานแล้ว'; M.ui.setNotice('บันทึกหลักฐานส่งงานแล้ว');
         } catch (err) { input.value = ''; status.textContent = err.message || 'อัปโหลดหลักฐานส่งงานไม่สำเร็จ'; M.ui.setNotice(status.textContent, 'error'); }
       };
@@ -193,7 +202,7 @@
         const next = $('#next').value;
         if (!next) return;
         try {
-          await M.request(`delivery_orders?id=eq.${encodeURIComponent(job.id)}`, { method: 'PATCH', private: true, headers: { Prefer: 'return=minimal' }, body: JSON.stringify({ status: next, proof_image: proofRef, updated_at: M.ui.nowIso() }) });
+          await updateRiderDelivery('status', job.id, { status: next, proof_image: proofRef });
           M.ui.setNotice('อัปเดตสถานะงานแล้ว'); setTimeout(() => location.reload(), 350);
         } catch (err) { M.ui.setNotice(err.message, 'error'); }
       });
