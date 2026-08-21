@@ -18,5 +18,6 @@ assert.match(app, /rider-earnings:\$\{ctx\.rider\.id\}/, 'Earnings background re
 assert.match(jobs, /rider-app\.js\?v=rider-ui-v2/, 'Jobs route ต้อง cache-bust application asset ใหม่');
 assert.match(earnings, /rider-app\.js\?v=rider-finance-v1/, 'Earnings route ต้อง cache-bust application asset เวอร์ชัน Finance ใหม่');
 assert.match(delivery, /ap-service-media\.js\?v=shared-media-v5/, 'Delivery route ต้อง cache-bust media asset ใหม่');
+assert.match(app, /forceFresh: true, cacheTtlMs: 10_000, cacheKey: `rider-delivery:/, 'Delivery detail ต้อง forceFresh เพื่อไม่ใช้ cache ก่อน assignment');
 
 console.log('rider jobs and earnings contract: PASS');
