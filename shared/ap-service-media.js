@@ -273,7 +273,7 @@
     return /^https:\/\//i.test(body.signedURL) ? body.signedURL : `${String(url).replace(/\/$/, '')}/storage/v1${body.signedURL}`;
   }
 
-  async function uploadPrivateImage(file, { url, publishableKey, accessToken, actorId, bucket, scope = 'proof', mediaType, ownerType, variant = 'primary', legacySource = {} } = {}) {
+  async function uploadPrivateImage(file, { url, publishableKey, accessToken, actorId, bucket, scope = 'proof', pathPrefix = '', mediaType, ownerType, variant = 'primary', legacySource = {} } = {}) {
     let prepared = null;
     progress.open('กำลังเตรียมหลักฐานรูปภาพ…');
     try {
@@ -281,7 +281,8 @@
       const contract = inferMediaContract({ bucket, scope, mediaType, ownerType, privateMedia: true });
       prepared = await prepareImage(file, mediaProfile(contract.mediaType));
       const nonce = typeof crypto?.randomUUID === 'function' ? crypto.randomUUID() : `${Date.now()}-${Math.random().toString(16).slice(2)}`;
-      const path = `${safeSegment(actorId, 'user')}/${safeSegment(scope, 'proof')}/${nonce}.${prepared.extension}`;
+      const pathOwner = pathPrefix ? safeSegment(pathPrefix, safeSegment(actorId, 'user')) : safeSegment(actorId, 'user');
+      const path = `${pathOwner}/${safeSegment(scope, 'proof')}/${nonce}.${prepared.extension}`;
       progress.update(58, 'กำลังอัปโหลดหลักฐานรูปภาพ', 'กำลังส่งไฟล์ไปยังพื้นที่จัดเก็บส่วนตัว');
       const upload = await uploadBlobWithMeasuredProgress(`${String(url).replace(/\/$/, '')}/storage/v1/object/${encodeURIComponent(bucket)}/${path}`, { apikey: publishableKey, Authorization: `Bearer ${accessToken}`, 'Content-Type': prepared.mimeType, 'x-upsert': 'false' }, prepared.blob);
       if (!upload.ok) { const detail = await upload.text().catch(() => ''); fail(`ไม่สามารถอัปโหลดหลักฐานได้${detail ? `: ${detail}` : ''}`); }
@@ -300,7 +301,7 @@
 
   root.APServiceMediaProgress = progress;
   root.APServiceMedia = Object.freeze({
-    version: 'shared-media-v5',
+    version: 'shared-media-v6',
     policy: Object.freeze({ sourceImageMaxBytes: SOURCE_IMAGE_MAX_BYTES, outputImageMaxBytes: DEFAULT_OUTPUT_MAX_BYTES, acceptedImageTypes: ACCEPTED_IMAGE_TYPES, profiles: MEDIA_PROFILES }),
     prepareImage,
     mediaProfile,
