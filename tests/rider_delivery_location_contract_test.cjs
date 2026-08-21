@@ -19,6 +19,8 @@ assert.match(location, /เปิดเส้นทางจุดรับ → 
 assert.match(location, /riderManualLat/, 'ต้องมี manual coordinate fallback สำหรับ route reference');
 assert.match(location, /coordinateValue/, 'ต้องแยกการอ่านพิกัดออกจาก Number โดยตรง');
 assert.match(location, /String\(value\)\.trim\(\)/, 'ช่องพิกัดว่างต้องถูกปฏิเสธ ไม่แปลงเป็นศูนย์');
+assert.match(location, /const rawPoint = \{ lat: \$\('#riderManualLat'\)\?\.value, lng: \$\('#riderManualLng'\)\?\.value \}/, 'manual map ต้องตรวจ raw input ก่อน normalize');
+assert.match(location, /const point = toPoint\(rawPoint\)/, 'manual map ต้อง normalize หลัง validation');
 assert.doesNotMatch(location, /delivery_location\s*:/, 'Rider UI ต้องไม่เขียนทับพิกัดปลายทางของลูกค้า');
 assert.doesNotMatch(location, /method:\s*['"]PATCH/, 'Rider GPS/map helper ต้องไม่แก้ status หรือข้อมูลออร์เดอร์โดยตรง');
 
