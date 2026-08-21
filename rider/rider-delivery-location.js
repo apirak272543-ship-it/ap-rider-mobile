@@ -3,11 +3,15 @@
   const M = window.APServiceMPA;
   if (!M || window.APRiderDeliveryLocation) return;
   const $ = selector => document.querySelector(selector);
+  const coordinateValue = value => {
+    if (value === null || value === undefined || String(value).trim() === '') return NaN;
+    return Number(value);
+  };
   const validPoint = point => {
-    const lat = Number(point?.lat), lng = Number(point?.lng);
+    const lat = coordinateValue(point?.lat), lng = coordinateValue(point?.lng);
     return Number.isFinite(lat) && Number.isFinite(lng) && Math.abs(lat) <= 90 && Math.abs(lng) <= 180;
   };
-  const toPoint = point => ({ lat: Number(point.lat), lng: Number(point.lng) });
+  const toPoint = point => ({ lat: coordinateValue(point.lat), lng: coordinateValue(point.lng) });
   const distanceMeters = (origin, destination) => {
     if (!validPoint(origin) || !validPoint(destination)) return null;
     const radians = value => Number(value) * Math.PI / 180;
