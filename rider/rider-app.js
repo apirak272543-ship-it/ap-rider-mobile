@@ -154,7 +154,9 @@
     if (!id) { $('#job').innerHTML = M.ui.error('ไม่พบรหัสงาน'); return; }
     const scope = pageScope('rider:delivery');
     try {
-      const rows = await scope.request(`${ordersPath(ctx.rider.id).replace('customer_name,dispatch_status,estimated_arrival_at,dispatch_note,dispatch_updated_at,ordered_at', 'customer_name,dispatch_status,estimated_arrival_at,dispatch_note,dispatch_updated_at,delivery_location,pickup_location,proof_image,ordered_at')}&id=eq.${encodeURIComponent(id)}`, { private: true, forceFresh: true, cacheTtlMs: 10_000, cacheKey: `rider-delivery:${ctx.rider.id}:${id}` });
+      const deliveryPath = `${ordersPath(ctx.rider.id).replace('customer_name,dispatch_status,estimated_arrival_at,dispatch_note,dispatch_updated_at,ordered_at', 'customer_name,dispatch_status,estimated_arrival_at,dispatch_note,dispatch_updated_at,delivery_location,pickup_location,proof_image,ordered_at')}&id=eq.${encodeURIComponent(id)}`;
+      let rows = await scope.request(deliveryPath, { private: true, forceFresh: true, cacheTtlMs: 10_000, cacheKey: `rider-delivery:${ctx.rider.id}:${id}` });
+      if (!rows?.[0]) rows = await M.request(deliveryPath, { private: true, forceFresh: true, cacheTtlMs: 10_000, cacheKey: `rider-delivery-recovery:${ctx.rider.id}:${id}` });
       const job = rows?.[0];
       if (!job) throw new Error('ไม่พบงานหรือบัญชีนี้ไม่มีสิทธิ์');
       const steps = Object.values(C.contracts.orderStatus).filter(next => C.order.canTransition({ from: job.status, to: next, actor: 'rider' }).ok);
