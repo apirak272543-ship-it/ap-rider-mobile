@@ -162,6 +162,13 @@
           rows = await M.request(deliveryPath, { private: true, forceFresh: true, cacheTtlMs: 0, cacheKey: `rider-delivery-recovery:${ctx.rider.id}:${id}:${attempt}:${Date.now()}` });
         }
       }
+      if (!rows?.[0]) {
+        const session = await M.auth.refreshSession(false);
+        const response = await fetch(`${M.config.url}/rest/v1/${deliveryPath}`, { headers: { apikey: M.config.publishableKey, Authorization: `Bearer ${session?.access_token || ''}` } });
+        const directRows = await response.json().catch(() => []);
+        if (!response.ok) throw new Error(directRows?.message || `ไม่สามารถโหลดรายละเอียดงานได้ (${response.status})`);
+        rows = Array.isArray(directRows) ? directRows : [];
+      }
       const job = rows?.[0];
       if (!job) throw new Error('ไม่พบงานหรือบัญชีนี้ไม่มีสิทธิ์');
       const steps = Object.values(C.contracts.orderStatus).filter(next => C.order.canTransition({ from: job.status, to: next, actor: 'rider' }).ok);
