@@ -19,6 +19,6 @@ assert.match(jobs, /rider-app\.js\?v=rider-ui-v2/, 'Jobs route ต้อง cach
 assert.match(earnings, /rider-app\.js\?v=rider-finance-v1/, 'Earnings route ต้อง cache-bust application asset เวอร์ชัน Finance ใหม่');
 assert.match(delivery, /ap-service-media\.js\?v=shared-media-v5/, 'Delivery route ต้อง cache-bust media asset ใหม่');
 assert.match(app, /forceFresh: true, cacheTtlMs: 10_000, cacheKey: `rider-delivery:/, 'Delivery detail ต้อง forceFresh เพื่อไม่ใช้ cache ก่อน assignment');
-assert.match(app, /if \(!rows\?\.\[0\]\) rows = await M\.request\(deliveryPath/, 'Delivery detail ต้องมี server-read recovery เมื่อ page scope ได้ข้อมูลว่าง');
+assert.match(app, /if \(!rows\?\.\[0\]\) \{\s*for \(let attempt = 0; attempt < 3/, 'Delivery detail ต้องมี server-read recovery retry เมื่อ page scope ได้ข้อมูลว่าง');
 
 console.log('rider jobs and earnings contract: PASS');
