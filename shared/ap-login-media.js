@@ -16,8 +16,9 @@
   function store(rows) { try { localStorage.setItem(cacheKey, JSON.stringify({ at: Date.now(), rows })); } catch {} }
   async function fetchRows() {
     const token = sessionToken();
-    if (!token) return [];
-    const response = await fetch(`${URL}/rest/v1/rpc/login_resolve_background_media`, { method: 'POST', headers: { apikey: KEY, Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' }, body: JSON.stringify({ p_target_app: APP }), signal: AbortSignal.timeout(2500) });
+    const headers = { apikey: KEY, 'Content-Type': 'application/json' };
+    if (token) headers.Authorization = `Bearer ${token}`;
+    const response = await fetch(`${URL}/rest/v1/rpc/login_resolve_background_media`, { method: 'POST', headers, body: JSON.stringify({ p_target_app: APP }), signal: AbortSignal.timeout(2500) });
     if (!response.ok) throw new Error(`login media ${response.status}`);
     const rows = await response.json();
     return Array.isArray(rows) ? rows.filter(valid) : [];
