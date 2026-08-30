@@ -7,6 +7,9 @@
   const SUPABASE_KEY = 'sb_publishable_TyJWnKkbS8vKcQKKAzoqSg_BOguwKRv';
   const LEGACY_KEYS = ['apservice_mpa_session_v1', 'apservice_mpa_session_backup_v1'];
   const path = String(location.pathname || '').toLowerCase();
+  const APP_SCOPE = path.includes('/admin/') ? 'admin' : path.includes('/rider/') ? 'rider' : 'customer';
+  const STORAGE_KEY = `apservice_${APP_SCOPE}_auth_v1`;
+  const SHARED_STORAGE_KEY = `sb-abtsctwfkgzciseppach-auth-token`;
   // Callback parsing is explicit in ap-service-mpa.js; disabling implicit URL parsing avoids double exchange/verify races.
   const detectSessionInUrl = false;
   const status = { phase: 'INITIALIZING', event: 'INITIAL_SESSION', session: null, error: null };
@@ -23,6 +26,7 @@
   };
   const parseLegacy = key => { try { const value = JSON.parse(localStorage.getItem(key) || 'null'); return value?.access_token && value?.refresh_token ? value : null; } catch (_) { return null; } };
   const clearLegacy = () => LEGACY_KEYS.forEach(key => { try { localStorage.removeItem(key); } catch (_) {} });
+  const clearSharedLegacy = () => { try { localStorage.removeItem(SHARED_STORAGE_KEY); } catch (_) {} };
 
   if (!root.supabase?.createClient) {
     const error = new Error('ไม่พบ Supabase Auth Client');
@@ -32,16 +36,19 @@
   }
 
   const client = root.supabase.createClient(SUPABASE_URL, SUPABASE_KEY, {
-    auth: { persistSession: true, autoRefreshToken: true, detectSessionInUrl },
+    auth: { persistSession: true, autoRefreshToken: true, detectSessionInUrl, storageKey: STORAGE_KEY },
   });
   root.APServiceSupabaseAuth = Object.freeze({ client, ready, status });
 
   const bootstrap = async () => {
     try {
-      const legacy = parseLegacy(LEGACY_KEYS[0]) || parseLegacy(LEGACY_KEYS[1]);
+      const appSession = parseLegacy(STORAGE_KEY);
+      const customLegacy = !appSession && (parseLegacy(LEGACY_KEYS[0]) || parseLegacy(LEGACY_KEYS[1]));
+      const sharedLegacy = !appSession && !customLegacy ? parseLegacy(SHARED_STORAGE_KEY) : null;
+      const legacy = customLegacy || sharedLegacy;
       if (legacy) {
         const { error } = await client.auth.setSession({ access_token: legacy.access_token, refresh_token: legacy.refresh_token });
-        if (!error) clearLegacy();
+        if (!error) { clearLegacy(); if (sharedLegacy) clearSharedLegacy(); }
       }
       client.auth.onAuthStateChange((event, session) => notify(event, session));
       const { data, error } = await client.auth.getSession();
