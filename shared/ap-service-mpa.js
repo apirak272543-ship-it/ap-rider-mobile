@@ -158,7 +158,22 @@
   let currentUserInFlight = null;
   function currentUser() {
     if (currentUserInFlight) return currentUserInFlight;
-    const pending = (async () => { const client = await requireAuthClient(); const { data, error } = await client.auth.getUser(); if (error) { if (/invalid|expired|refresh|session/i.test(String(error.message || ''))) return null; throw error; } return data.user || null; })();
+    const pending = (async () => {
+      const client = await requireAuthClient();
+      const readUser = async () => { const { data, error } = await client.auth.getUser(); if (error) throw error; return data.user || null; };
+      try {
+        const user = await readUser();
+        if (user) return user;
+        return null;
+      } catch (error) {
+        const raw = String(error?.message || '');
+        if (!/invalid|expired|refresh|session/i.test(raw)) throw error;
+        try { await client.auth.refreshSession(); return await readUser(); } catch (refreshError) {
+          if (/invalid|expired|refresh|session/i.test(String(refreshError?.message || ''))) return null;
+          throw refreshError;
+        }
+      }
+    })();
     currentUserInFlight = pending;
     pending.then(() => { if (currentUserInFlight === pending) currentUserInFlight = null; }, () => { if (currentUserInFlight === pending) currentUserInFlight = null; });
     return pending;
