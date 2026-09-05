@@ -470,3 +470,10 @@ details[open] > summary .rider-summary-chevron { transform: rotate(180deg); }
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after { scroll-behavior: auto !important; transition: none !important; }
 }
+
+
+/* Dual confirmation: automation assists, Rider can always recover manually. */
+.rider-next-action__actions { display: grid; gap: 10px; }
+.rider-next-action__actions .rider-arrival-required { margin: 0; padding: 10px 12px; border: 1px solid #d8def6; border-radius: var(--rider-radius-small); background: #f2f4ff; color: var(--rider-primary-deep); font-size: 12px; line-height: 1.55; }
+.rider-next-action__actions .rider-next-action__button { min-height: 50px; }
+.rider-next-action__button[disabled] { cursor: wait; opacity: .68; }

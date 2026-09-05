@@ -211,13 +211,16 @@ Deno.serve(async (request) => {
             const { data: order, error: orderError } = await admin.from('delivery_orders').select('id,rider_id,rider_name,status,pickup_location,proof_image,dispatch_status,workflow_state,delivery_started_at,completed_at,updated_at').eq('id', orderId).maybeSingle()
       if (orderError) return json({ error: orderError.message }, 400)
       if (!order || order.rider_id !== rider.id) return json({ error: 'ไม่พบงานที่เป็นของ Rider บัญชีนี้' }, 404)
+      const requestedStatus = operation === 'status' ? text(input.status) : ''
+      if (requestedStatus && String(order.status || '') === requestedStatus) return json({ ok: true, operation, order, idempotent: true })
       if (TERMINAL_ORDER_STATUSES.has(String(order.status || ''))) return json({ error: 'งานนี้ปิดแล้ว ไม่สามารถอัปเดตจาก Rider ได้' }, 409)
       const now = new Date().toISOString()
       const updates: Record<string, unknown> = { updated_at: now }
       if (operation === 'status') {
         const nextStatus = text(input.status)
         const riderStatuses = new Set([ORDER_STATUS.RIDER_PICKUP, ORDER_STATUS.ARRIVED_STORE, ORDER_STATUS.COLLECTED, ORDER_STATUS.DELIVERING, ORDER_STATUS.COMPLETED])
-        if (!riderStatuses.has(nextStatus) || !(ORDER_TRANSITIONS[String(order.status || '')] || []).includes(nextStatus)) return json({ error: `ไม่อนุญาตให้ Rider เปลี่ยนจาก “${text(order.status)}” เป็น “${nextStatus}”` }, 409)
+        if (!riderStatuses.has(nextStatus)) return json({ error: `ไม่อนุญาตให้ Rider ใช้สถานะ “${nextStatus}”` }, 409)
+        if (!(ORDER_TRANSITIONS[String(order.status || '')] || []).includes(nextStatus)) return json({ error: `ไม่อนุญาตให้ Rider เปลี่ยนจาก “${text(order.status)}” เป็น “${nextStatus}”` }, 409)
         updates.status = nextStatus
         if (nextStatus === ORDER_STATUS.ARRIVED_STORE) {
           const arrivalMode = text(input.arrival_mode) || 'geofence'

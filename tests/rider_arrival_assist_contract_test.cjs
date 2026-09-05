@@ -22,10 +22,13 @@ assert.match(location, /if \(manualArrivalButton\) manualArrivalButton\.onclick/
 assert.match(location, /if \(manualMapButton\) manualMapButton\.onclick/, 'manual map button ต้อง bind event แบบมี null guard');
 assert.match(app, /arrival_mode: manual \? 'manual' : 'geofence'/, 'frontend ต้องส่งโหมด arrival ไป server');
 assert.match(app, /arrival_location: location \|\| null/, 'frontend ต้องส่งพิกัด arrival ไป server');
+assert.match(app, /ยืนยันถึงร้านด้วยตนเอง/, 'ต้องมีปุ่ม manual confirmation ในขั้นปัจจุบัน');
+assert.match(app, /statusSaveInFlight/, 'manual confirmation ต้องกันการกดซ้ำระหว่างบันทึก');
 assert.match(edge, /ORDER_STATUS\.ARRIVED_STORE/, 'server ต้องตรวจเฉพาะ transition ถึงร้าน');
 assert.match(edge, /distanceMeters\(arrivalLocation, order\.pickup_location\)/, 'server ต้องตรวจระยะจากพิกัดจริง');
 assert.match(edge, /ride_arrived_location/, 'server ต้องบันทึกพิกัดหรือ manual evidence');
 assert.match(edge, /delivery_location_source/, 'server ต้องบันทึกแหล่งที่มาของ arrival');
+assert.match(edge, /idempotent: true/, 'server ต้องคืนผลสำเร็จเมื่อ retry สถานะเดิม');
 assert.match(css, /rider-in-app-map/, 'canonical rider stylesheet ต้องมี map style');
 assert.match(css, /rider-arrival-assist/, 'canonical rider stylesheet ต้องมี arrival assist style');
 
