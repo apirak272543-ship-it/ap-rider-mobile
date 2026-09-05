@@ -354,6 +354,35 @@ details[open] > summary .rider-summary-chevron { transform: rotate(180deg); }
 .rider-location-actions .mpa-button { display: inline-flex; align-items: center; justify-content: center; }
 .rider-location-manual { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; margin-top: 12px; }
 .rider-location-policy { margin: 12px 0 0; color: var(--rider-muted); font-size: 11px; line-height: 1.45; }
+.rider-location-heading { display: flex; align-items: flex-start; justify-content: space-between; gap: 10px; }
+.rider-location-heading h2 { margin: 0; font-size: 18px; letter-spacing: -.03em; }
+.rider-map-badge { display: inline-flex; align-items: center; min-height: 26px; padding: 4px 9px; border-radius: 999px; background: var(--rider-primary-soft); color: var(--rider-primary-deep); font-size: 10px; font-weight: 950; }
+.rider-in-app-map { min-height: 240px; margin: 14px -4px 10px; overflow: hidden; border: 1px solid var(--rider-line); border-radius: 16px; background: #e9eef6; }
+.rider-in-app-map .leaflet-control-attribution { font-size: 9px; }
+.rider-map-status, .rider-location-status { margin: 8px 0 0; color: var(--rider-muted); font-size: 11px; line-height: 1.45; }
+.rider-map-status.is-success, .rider-location-status.is-success { color: var(--rider-success); font-weight: 850; }
+.rider-map-status.is-warning, .rider-location-status.is-warning { color: #9a6700; }
+.rider-route-summary { display: grid; grid-template-columns: 1.15fr .85fr 1fr; gap: 8px; margin: 12px 0; }
+.rider-route-summary > div { display: grid; gap: 3px; min-width: 0; padding: 9px; border-radius: 10px; background: var(--rider-surface-muted); }
+.rider-route-summary small { color: var(--rider-muted); font-size: 9px; }
+.rider-route-summary strong { overflow: hidden; color: var(--rider-ink); font-size: 11px; text-overflow: ellipsis; white-space: nowrap; }
+.rider-arrival-assist { display: grid; gap: 10px; margin: 12px 0; padding: 12px; border: 1px solid #d8ddec; border-radius: 14px; background: #f7f8ff; }
+.rider-arrival-assist__copy { display: flex; align-items: center; gap: 9px; }
+.rider-arrival-assist__copy > div { display: grid; gap: 3px; }
+.rider-arrival-assist__copy strong { color: var(--rider-ink); font-size: 12px; }
+.rider-arrival-assist__copy small { color: var(--rider-muted); font-size: 10px; line-height: 1.4; }
+.rider-arrival-assist__icon { display: grid; place-items: center; flex: 0 0 30px; width: 30px; height: 30px; border-radius: 10px; background: #e9ebff; color: var(--rider-primary-deep); font-size: 18px; font-weight: 900; }
+.rider-arrival-assist .mpa-button { width: 100%; }
+.rider-arrival-assist.is-ready { border-color: #a9ddc7; background: #f1fbf6; }
+.rider-arrival-assist.is-ready .rider-arrival-assist__icon { background: var(--rider-success-soft); color: var(--rider-success); }
+.rider-arrival-assist.is-ready .mpa-button { background: var(--rider-success); }
+.rider-arrival-required { margin: 0; padding: 10px 12px; border-radius: 10px; background: #f5f6ff; color: var(--rider-primary-deep); font-size: 11px; line-height: 1.45; }
+.rider-map-fallback { margin-top: 10px; }
+.rider-map-fallback summary, .rider-location-manual summary { color: var(--rider-muted); font-size: 11px; font-weight: 800; cursor: pointer; }
+.rider-map-fallback__body, .rider-location-manual__body { display: grid; gap: 8px; padding-top: 10px; }
+.rider-map-fallback__body .mpa-button { width: 100%; }
+.rider-location-manual { margin-top: 10px; }
+
 .mpa-modal-backdrop { background: rgba(25, 30, 45, .46); backdrop-filter: blur(4px); }
 .mpa-modal { border-radius: 24px; }
 

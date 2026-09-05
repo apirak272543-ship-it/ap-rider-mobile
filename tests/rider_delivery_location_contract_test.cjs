@@ -6,7 +6,7 @@ const app = fs.readFileSync('rider/rider-app.js', 'utf8');
 const location = fs.readFileSync('rider/rider-delivery-location.js', 'utf8');
 
 assert.match(page, /rider-delivery-location\.js/, 'Delivery page ต้องโหลด GPS/map fallback helper');
-assert.match(page, /rider-delivery-location\.css/, 'Delivery page ต้องโหลด GPS/map fallback styles');
+assert.match(page, /rider-ui-polish\.css/, 'Delivery page ต้องโหลด canonical rider styles สำหรับ GPS/map');
 assert.match(app, /delivery_location,pickup_location,proof_image/, 'Delivery query ต้องอ่านพิกัดออร์เดอร์');
 assert.match(app, /AP\s*RiderDeliveryLocation|APServiceRiderDeliveryLocation|APRiderDeliveryLocation/, 'Delivery runtime ต้อง mount location UX');
 assert.match(location, /navigator\.geolocation/, 'ต้องมี GPS verification');
