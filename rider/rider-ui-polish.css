@@ -254,6 +254,11 @@ details[open] > summary .rider-summary-chevron { transform: rotate(180deg); }
 .rider-stepper__item.is-done, .rider-stepper__item.is-current { color: var(--rider-ink); }
 .rider-stepper__item.is-done > span { background: var(--rider-success-soft); color: var(--rider-success); }
 .rider-stepper__item.is-current > span { background: var(--rider-primary); color: #fff; box-shadow: 0 0 0 4px var(--rider-primary-soft); }
+.rider-stepper__item.is-locked { color: #a8adba; }
+.rider-stepper__item.is-locked > span { background: #f0f1f5; color: #a8adba; font-size: 10px; }
+.rider-stepper__item small { grid-column: 2; margin-top: -7px; color: var(--rider-muted); font-size: 10px; }
+.rider-stepper__item.is-current small { color: var(--rider-primary-deep); font-weight: 850; }
+.rider-stepper-help { margin: 8px 0 0; color: var(--rider-muted); font-size: 11px; line-height: 1.45; }
 .rider-next-action { border-color: #c8d0f6; background: linear-gradient(145deg, #fff, #f6f7ff); }
 .rider-next-action__button { width: 100%; }
 .rider-complete-state { margin: 0; color: var(--rider-success); font-weight: 900; }
