@@ -352,6 +352,23 @@ details[open] > summary .rider-summary-chevron { transform: rotate(180deg); }
 .mpa-modal-backdrop { background: rgba(25, 30, 45, .46); backdrop-filter: blur(4px); }
 .mpa-modal { border-radius: 24px; }
 
+.rider-focus-banner { display: flex; align-items: center; gap: 10px; max-width: 1120px; margin: 0 auto; padding: 9px 18px; border-bottom: 1px solid #dbe0f8; background: #f5f6ff; color: var(--rider-primary-deep); }
+.rider-focus-banner__icon { display: grid; place-items: center; flex: 0 0 30px; width: 30px; height: 30px; border-radius: 10px; background: var(--rider-primary); color: #fff; font-size: 14px; font-weight: 950; }
+.rider-focus-banner > div { display: grid; min-width: 0; gap: 2px; }
+.rider-focus-banner strong { overflow: hidden; font-size: 11px; text-overflow: ellipsis; white-space: nowrap; }
+.rider-focus-banner small { color: var(--rider-muted); font-size: 10px; }
+.rider-focus-banner a { margin-left: auto; flex: 0 0 auto; color: var(--rider-primary-deep); font-size: 11px; font-weight: 900; text-decoration: none; }
+.rider-nav-disabled { position: relative; display: inline-flex; align-items: center; gap: 7px; color: #a4a9b8; cursor: not-allowed; opacity: .66; }
+.rider-nav-disabled small { position: absolute; top: calc(100% + 3px); left: 0; z-index: 2; display: none; padding: 5px 7px; border-radius: 7px; background: #20243a; color: #fff; font-size: 9px; white-space: nowrap; }
+.rider-nav-disabled:hover small, .rider-nav-disabled:focus-within small { display: block; }
+.rider-focus-nav { font-weight: 950; }
+.rider-topbar--locked { border-bottom-color: #c8cef2; }
+.rider-lock-menu-note { display: grid; gap: 3px; margin: 4px 8px 8px; padding: 9px 10px; border-radius: 10px; background: #f5f6ff; }
+.rider-lock-menu-note strong { color: var(--rider-primary-deep); font-size: 11px; }
+.rider-lock-menu-note small { color: var(--rider-muted); font-size: 10px; line-height: 1.45; }
+.rider-nav-logout { display: block; width: calc(100% - 16px); margin: 4px 8px 8px; padding: 9px 10px; border: 1px solid #e3b4b4; border-radius: 10px; background: #fff8f8; color: #a33a3a; font: inherit; font-size: 11px; font-weight: 850; text-align: left; cursor: pointer; }
+.rider-order-locked .mpa-shell { padding-top: 14px; }
+
 .rider-dashboard-content { display: grid; gap: 12px; }
 .rider-dashboard-status { display: flex; align-items: center; justify-content: space-between; gap: 14px; padding: 18px; border-radius: var(--rider-radius); background: var(--rider-primary); color: #fff; box-shadow: var(--rider-shadow-strong); }
 .rider-dashboard-status h2 { margin: 0; font-size: 21px; }

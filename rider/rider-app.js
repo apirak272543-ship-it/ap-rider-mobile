@@ -11,13 +11,21 @@
   const secondaryLinks = [['profile', 'โปรไฟล์', '◉'], ['settings', 'ตั้งค่า', '⚙']];
   const dispatchLabels = Object.freeze({ unassigned: 'ยังไม่มอบหมาย', assigned: 'มอบหมายแล้ว', en_route: 'กำลังไปจุดรับ', arrived_pickup: 'ถึงจุดรับแล้ว', picked_up: 'รับสินค้าแล้ว', delivering: 'กำลังไปส่ง', delivered: 'ส่งสำเร็จ', exception: 'มีเหตุขัดข้อง' });
   const dispatchLabel = value => dispatchLabels[String(value || '')] || String(value || 'ยังไม่ระบุ');
+  const terminalOrderStatuses = new Set([C.contracts.orderStatus.COMPLETED, C.contracts.orderStatus.CANCELLED]);
+  const isActiveOrder = order => Boolean(order?.id && !terminalOrderStatuses.has(String(order.status || '')));
+  const activeOrderLabel = order => order?.store_name || 'งานจัดส่งปัจจุบัน';
   const formatEta = value => { const date = new Date(value); if (Number.isNaN(date.getTime())) return 'ยังไม่กำหนด'; const minutes = Math.round((date.getTime() - Date.now()) / 60000); return minutes < 0 ? `เลยกำหนด ${Math.abs(minutes)} นาที` : minutes < 60 ? `อีกประมาณ ${minutes} นาที` : `ประมาณ ${Math.floor(minutes / 60)} ชม. ${minutes % 60} นาที`; };
 
-  const app = (active, content) => {
-    const primaryNav = links.map(([key, label, icon]) => `<a class="${active === key ? 'active' : ''}" href="${key}.html"><span class="rider-nav-icon" aria-hidden="true">${icon}</span><span>${label}</span></a>`).join('');
-    const secondaryNav = secondaryLinks.map(([key, label, icon]) => `<a href="${key}.html"><span class="rider-nav-icon" aria-hidden="true">${icon}</span><span>${label}</span></a>`).join('');
-    const mobileNav = `${primaryNav}<details class="rider-more-menu"><summary><span class="rider-nav-icon" aria-hidden="true">⋯</span><span>เพิ่มเติม</span></summary><div class="rider-more-menu__panel">${secondaryNav}<a href="../rider.html" aria-label="เปิดระบบไรเดอร์เดิม">ระบบเดิม</a></div></details>`;
-    document.body.innerHTML = `<header class="mpa-topbar"><a class="mpa-brand" href="dashboard.html"><span class="rider-brand-mark">AS</span><span><strong>AP Service · ไรเดอร์</strong><small>ศูนย์งานส่ง</small></span></a><nav class="mpa-nav rider-desktop-nav">${primaryNav}<details class="rider-more-menu"><summary><span class="rider-nav-icon" aria-hidden="true">⋯</span><span>เพิ่มเติม</span></summary><div class="rider-more-menu__panel">${secondaryNav}<a href="../rider.html" aria-label="เปิดระบบไรเดอร์เดิม">ระบบเดิม</a></div></details></nav></header><main class="mpa-shell" data-page-content>${content}</main><nav class="rider-bottom-nav" aria-label="เมนูหลักสำหรับมือถือ">${mobileNav}</nav>`;
+  const app = (active, content, focusOrder = null) => {
+    const locked = isActiveOrder(focusOrder);
+    const disabledLink = (key, label, icon) => `<span class="rider-nav-disabled" aria-disabled="true" title="ปิดงานปัจจุบันก่อนจึงใช้เมนูนี้ได้"><span class="rider-nav-icon" aria-hidden="true">${icon}</span><span>${label}</span><small>ล็อกระหว่างส่งงาน</small></span>`;
+    const focusLink = `<a class="active rider-focus-nav" href="delivery.html?id=${encodeURIComponent(focusOrder?.id || '')}"><span class="rider-nav-icon" aria-hidden="true">▣</span><span>งานปัจจุบัน</span></a>`;
+    const primaryNav = locked ? `${focusLink}${links.map(([key, label, icon]) => disabledLink(key, label, icon)).join('')}` : links.map(([key, label, icon]) => `<a class="${active === key ? 'active' : ''}" href="${key}.html"><span class="rider-nav-icon" aria-hidden="true">${icon}</span><span>${label}</span></a>`).join('');
+    const secondaryNav = locked ? secondaryLinks.map(([key, label, icon]) => disabledLink(key, label, icon)).join('') : secondaryLinks.map(([key, label, icon]) => `<a href="${key}.html"><span class="rider-nav-icon" aria-hidden="true">${icon}</span><span>${label}</span></a>`).join('');
+    const morePanel = locked ? `<div class="rider-lock-menu-note"><strong>เมนูถูกพักชั่วคราว</strong><small>ทำงานปัจจุบันให้เสร็จก่อน แล้วเมนูทั้งหมดจะปลดล็อก</small></div>${secondaryNav}<button type="button" class="rider-nav-logout" data-rider-logout>ออกจากระบบ</button>` : `${secondaryNav}<a href="../rider.html" aria-label="เปิดระบบไรเดอร์เดิม">ระบบเดิม</a>`;
+    const mobileNav = locked ? `${focusLink}<details class="rider-more-menu"><summary><span class="rider-nav-icon" aria-hidden="true">🔒</span><span>เมนูถูกล็อก</span></summary><div class="rider-more-menu__panel">${morePanel}</div></details>` : `${primaryNav}<details class="rider-more-menu"><summary><span class="rider-nav-icon" aria-hidden="true">⋯</span><span>เพิ่มเติม</span></summary><div class="rider-more-menu__panel">${morePanel}</div></details>`;
+    document.body.classList.toggle('rider-order-locked', locked);
+    document.body.innerHTML = `<header class="mpa-topbar${locked ? ' rider-topbar--locked' : ''}"><a class="mpa-brand" href="${locked ? `delivery.html?id=${encodeURIComponent(focusOrder.id)}` : 'dashboard.html'}"><span class="rider-brand-mark">AS</span><span><strong>AP Service · ไรเดอร์</strong><small>${locked ? `กำลังทำงาน · ${h(activeOrderLabel(focusOrder))}` : 'ศูนย์งานส่ง'}</small></span></a><nav class="mpa-nav rider-desktop-nav">${primaryNav}<details class="rider-more-menu"><summary><span class="rider-nav-icon" aria-hidden="true">${locked ? '🔒' : '⋯'}</span><span>${locked ? 'เมนูถูกล็อก' : 'เพิ่มเติม'}</span></summary><div class="rider-more-menu__panel">${morePanel}</div></details></nav></header>${locked ? `<section class="rider-focus-banner" role="status"><span class="rider-focus-banner__icon" aria-hidden="true">▣</span><div><strong>โหมดทำงาน: ${h(activeOrderLabel(focusOrder))}</strong><small>เมนูอื่นจะปลดล็อกหลังปิดงานนี้</small></div><a href="delivery.html?id=${encodeURIComponent(focusOrder.id)}">กลับไปทำงาน</a></section>` : ''}<main class="mpa-shell" data-page-content>${content}</main><nav class="rider-bottom-nav" aria-label="เมนูหลักสำหรับมือถือ">${mobileNav}</nav>`;
   };
 
   async function ownRider(user) {
@@ -57,7 +65,7 @@
   };
 
   async function gate(active, content) {
-    app(active, content);
+    app(active, M.ui.loading('กำลังตรวจสอบงานปัจจุบัน…'), { id: '__checking__', status: 'กำลังตรวจสอบงาน', store_name: 'กำลังตรวจสอบงาน' });
     const access = await M.auth.requireRole('rider', { loginUrl: 'login.html', container: $('[data-page-content]'), renderLoading: false });
     if (!access) return null;
     const controls = await M.request(`account_controls?select=status,suspension_reason,feature_overrides&user_id=eq.${encodeURIComponent(access.user.id)}&limit=1`, { private: true, cacheTtlMs: 10_000, cacheKey: `rider-account-control:${access.user.id}` });
@@ -71,10 +79,25 @@
       $('[data-page-content]').innerHTML = M.ui.error('ไม่พบโปรไฟล์ไรเดอร์', 'กรุณาติดต่อผู้ดูแลระบบ');
       return null;
     }
+    let activeOrder = null;
+    try {
+      const assigned = await M.request(ordersPath(rider.id), { private: true, forceFresh: true, cacheTtlMs: 5_000, cacheKey: `rider-active-order:${rider.id}` });
+      activeOrder = (assigned || []).find(isActiveOrder) || null;
+    } catch (error) { console.warn('Rider active-order guard read skipped', error); }
+    if (activeOrder && page !== 'delivery') {
+      location.replace(`delivery.html?id=${encodeURIComponent(activeOrder.id)}`);
+      return null;
+    }
+    if (activeOrder && page === 'delivery' && params.get('id') !== String(activeOrder.id)) {
+      location.replace(`delivery.html?id=${encodeURIComponent(activeOrder.id)}`);
+      return null;
+    }
+    app(active, content, activeOrder);
+    document.querySelectorAll('[data-rider-logout]').forEach(button => { button.onclick = () => M.auth.signOut('login.html'); });
     const config = await readCentralConfig(access.user.id);
     mountCentralConfig(config);
     void window.APServiceRiderRecognition?.notify(access);
-    return { ...access, rider, control, config };
+    return { ...access, rider, control, config, activeOrder, orderLocked: Boolean(activeOrder) };
   }
 
   async function readCentralConfig(userId) {
@@ -154,8 +177,8 @@
         if (!confirm(`รับงานจาก ${job.store_name || 'ร้านค้า'} ใช่หรือไม่?`)) return;
         button.disabled = true; button.textContent = 'กำลังรับงาน…';
         try {
-          const claimed = await M.request(`delivery_orders?id=eq.${encodeURIComponent(job.id)}&rider_id=is.null&status=eq.${encodeURIComponent(job.status)}`, { method: 'PATCH', private: true, headers: { Prefer: 'return=representation' }, body: JSON.stringify({ rider_id: ctx.rider.id, rider_name: ctx.rider.name, status: next, accepted_at: M.ui.nowIso(), updated_at: M.ui.nowIso() }), signal: typeof AbortSignal?.timeout === 'function' ? AbortSignal.timeout(15000) : undefined });
-          if (!Array.isArray(claimed) || !claimed.length) throw new Error('งานนี้ถูกรับหรือเปลี่ยนสถานะโดยไรเดอร์คนอื่นแล้ว');
+          const claimed = await updateRiderDelivery('claim', job.id, { rider_name: ctx.rider.name });
+          if (!claimed?.id) throw new Error('งานนี้ถูกรับหรือเปลี่ยนสถานะโดยไรเดอร์คนอื่นแล้ว');
           M.ui.setNotice('รับงานแล้ว'); location.assign(`delivery.html?id=${encodeURIComponent(job.id)}`);
         } catch (err) { button.disabled = false; button.textContent = 'รับงาน'; M.ui.setNotice(err.message || 'รับงานไม่สำเร็จ', 'error'); }
       }));

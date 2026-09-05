@@ -1,0 +1,20 @@
+const assert = require('node:assert/strict');
+const fs = require('node:fs');
+const path = require('node:path');
+const root = path.resolve(__dirname, '..');
+const app = fs.readFileSync(path.join(root, 'rider/rider-app.js'), 'utf8');
+const css = fs.readFileSync(path.join(root, 'rider/rider-ui-polish.css'), 'utf8');
+const migration = fs.readFileSync(path.join(root, 'supabase/migrations/20260905085000_single_active_rider_order.sql'), 'utf8');
+
+assert.match(app, /terminalOrderStatuses = new Set/, 'Rider app must define terminal order statuses');
+assert.match(app, /activeOrder = \(assigned \|\| \[\]\)\.find\(isActiveOrder\)/, 'Route guard must discover an active order before rendering menus');
+assert.match(app, /location\.replace\(`delivery\.html\?id=/, 'Active Rider must be forced to the current delivery screen');
+assert.match(app, /rider-nav-disabled/, 'Locked navigation must render disabled entries');
+assert.match(app, /updateRiderDelivery\('claim'/, 'Claim must use the protected server operation');
+assert.doesNotMatch(app, /M\.request\(`delivery_orders\?id=.*method: 'PATCH'/, 'Claim must not PATCH delivery_orders directly from the client');
+assert.match(css, /rider-focus-banner/, 'Locked mode must explain why menus are unavailable');
+assert.match(css, /rider-nav-disabled/, 'Locked navigation must have an explicit disabled style');
+assert.match(migration, /CREATE OR REPLACE FUNCTION public\.claim_delivery_order/, 'Database must expose an atomic claim function');
+assert.match(migration, /pg_advisory_xact_lock/, 'Claim must serialize concurrent attempts per rider');
+assert.match(migration, /status NOT IN \('สำเร็จแล้ว', 'ยกเลิก'\)/, 'Only terminal statuses release the Rider slot');
+console.log('rider active-order lock contract: PASS');
