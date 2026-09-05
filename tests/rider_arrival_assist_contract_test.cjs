@@ -17,6 +17,9 @@ assert.match(location, /ARRIVAL_RADIUS_METERS = 50/, 'arrival assist ต้อ�
 assert.match(location, /MAX_ARRIVAL_ACCURACY_METERS = 80/, 'arrival assist ต้องตรวจ GPS accuracy ก่อนเปิดปุ่ม');
 assert.match(location, /riderConfirmArrival/, 'ต้องมีปุ่มยืนยันถึงร้าน');
 assert.match(location, /riderManualArrival/, 'ต้องมี manual fallback แบบยุบไว้');
+assert.match(location, /if \(confirmArrivalButton\) confirmArrivalButton\.onclick/, 'arrival button ต้อง bind event แบบมี null guard');
+assert.match(location, /if \(manualArrivalButton\) manualArrivalButton\.onclick/, 'manual arrival button ต้อง bind event แบบมี null guard');
+assert.match(location, /if \(manualMapButton\) manualMapButton\.onclick/, 'manual map button ต้อง bind event แบบมี null guard');
 assert.match(app, /arrival_mode: manual \? 'manual' : 'geofence'/, 'frontend ต้องส่งโหมด arrival ไป server');
 assert.match(app, /arrival_location: location \|\| null/, 'frontend ต้องส่งพิกัด arrival ไป server');
 assert.match(edge, /ORDER_STATUS\.ARRIVED_STORE/, 'server ต้องตรวจเฉพาะ transition ถึงร้าน');
